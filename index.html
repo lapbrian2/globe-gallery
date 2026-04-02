@@ -3,20 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Interactive 3D globe gallery — images distributed across a sphere with orbit controls, liquid distortion, and layout morphing.">
+  <meta name="description" content="Interactive 3D globe gallery — images distributed across a sphere with orbit controls, liquid distortion shaders, and layout morphing.">
   <meta name="theme-color" content="#09090B">
+  <meta property="og:title" content="Globe Gallery">
+  <meta property="og:description" content="Interactive 3D image sphere with liquid distortion and layout morphing.">
+  <meta property="og:type" content="website">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:;">
-  <title>Globe Gallery</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=Cormorant+Garamond:wght@300;400&display=swap" rel="stylesheet">
   <style>
     /* ========================================
-       RESET & BASE
+       RESET
     ======================================== */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
 
+    /* ========================================
+       CUSTOM PROPERTIES
+    ======================================== */
     :root {
       --ink: #09090B;
       --graphite: #18181B;
@@ -29,6 +34,9 @@
       --font-body: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
+    /* ========================================
+       BASE
+    ======================================== */
     html, body {
       width: 100%;
       height: 100%;
@@ -37,6 +45,41 @@
       color: var(--gallery-white);
       font-family: var(--font-body);
       -webkit-font-smoothing: antialiased;
+      cursor: none;
+    }
+
+    /* ========================================
+       CUSTOM CURSOR
+    ======================================== */
+    .cursor-dot {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 6px;
+      height: 6px;
+      background: var(--gallery-white);
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      will-change: transform;
+    }
+    .cursor-ring {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 36px;
+      height: 36px;
+      border: 1px solid rgba(250,250,249,0.3);
+      pointer-events: none;
+      z-index: 9998;
+      transform: translate(-50%, -50%);
+      will-change: transform;
+      transition: width 0.25s ease, height 0.25s ease, border-color 0.25s ease;
+    }
+    .cursor-ring.hovering {
+      width: 56px;
+      height: 56px;
+      border-color: var(--gold);
     }
 
     /* ========================================
@@ -51,30 +94,38 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      transition: opacity 0.6s ease, visibility 0.6s ease;
+      transition: opacity 0.8s ease, visibility 0.8s ease;
     }
     #loader.hidden {
       opacity: 0;
       visibility: hidden;
       pointer-events: none;
     }
-    #loader .loader-text {
-      font-family: var(--font-display);
-      font-weight: 300;
-      font-size: 1.25rem;
-      letter-spacing: 0.15em;
+    .loader-overline {
+      font-family: var(--font-body);
+      font-weight: 500;
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
       text-transform: uppercase;
       color: var(--pewter);
-      margin-bottom: 2rem;
+      margin-bottom: 1.5rem;
     }
-    #loader .progress-bar {
-      width: 200px;
+    .loader-title {
+      font-family: var(--font-display);
+      font-weight: 300;
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      color: var(--gallery-white);
+      letter-spacing: -0.02em;
+      margin-bottom: 3rem;
+    }
+    .loader-bar {
+      width: 160px;
       height: 1px;
-      background: rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.06);
       position: relative;
       overflow: hidden;
     }
-    #loader .progress-fill {
+    .loader-fill {
       position: absolute;
       left: 0;
       top: 0;
@@ -82,6 +133,13 @@
       width: 0%;
       background: var(--gold);
       transition: width 0.3s ease;
+    }
+    .loader-pct {
+      font-family: var(--font-body);
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      color: var(--pewter);
+      margin-top: 1rem;
     }
 
     /* ========================================
@@ -107,120 +165,201 @@
       z-index: 10;
       pointer-events: none;
     }
-    #ui-overlay * {
+    #ui-overlay > * {
       pointer-events: auto;
     }
 
+    /* Title — top left */
+    .title-bar {
+      position: fixed;
+      top: 2.5rem;
+      left: 2.5rem;
+      z-index: 20;
+    }
+    .title-bar .overline {
+      font-family: var(--font-body);
+      font-weight: 500;
+      font-size: 0.55rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--pewter);
+      margin-bottom: 0.35rem;
+    }
+    .title-bar h1 {
+      font-family: var(--font-display);
+      font-weight: 300;
+      font-size: 1.4rem;
+      letter-spacing: -0.01em;
+      color: var(--gallery-white);
+    }
+
+    /* Count — top right */
+    .image-count {
+      position: fixed;
+      top: 2.5rem;
+      right: 2.5rem;
+      z-index: 20;
+      text-align: right;
+    }
+    .image-count .number {
+      font-family: var(--font-display);
+      font-weight: 300;
+      font-size: 1.4rem;
+      color: var(--gallery-white);
+    }
+    .image-count .label {
+      font-family: var(--font-body);
+      font-size: 0.55rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--pewter);
+      margin-top: 0.15rem;
+    }
+
+    /* View toggle — bottom center */
     .view-toggle {
       position: fixed;
-      bottom: 2rem;
+      bottom: 2.5rem;
       left: 50%;
       transform: translateX(-50%);
       z-index: 20;
       display: flex;
       gap: 0;
-      border: 1px solid rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.08);
     }
     .view-toggle button {
       background: transparent;
       color: var(--pewter);
       border: none;
-      padding: 0.5rem 1.25rem;
+      padding: 0.6rem 1.5rem;
       font-family: var(--font-body);
-      font-size: 0.7rem;
+      font-size: 0.6rem;
       font-weight: 500;
-      letter-spacing: 0.1em;
+      letter-spacing: 0.15em;
       text-transform: uppercase;
-      cursor: pointer;
+      cursor: none;
       transition: color 0.3s ease, background 0.3s ease;
     }
     .view-toggle button.active {
       color: var(--gallery-white);
-      background: rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.04);
     }
     .view-toggle button:hover {
       color: var(--gallery-white);
     }
-
-    .title-bar {
-      position: fixed;
-      top: 2rem;
-      left: 2rem;
-      z-index: 20;
-    }
-    .title-bar h1 {
-      font-family: var(--font-display);
-      font-weight: 300;
-      font-size: 1.1rem;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--gallery-white);
-    }
-    .title-bar p {
-      font-size: 0.65rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--pewter);
-      margin-top: 0.25rem;
+    .view-toggle button:focus-visible {
+      outline: 1px solid var(--gold);
+      outline-offset: -1px;
     }
 
-    .image-count {
+    /* Zoom hint — bottom right */
+    .zoom-hint {
       position: fixed;
-      top: 2rem;
-      right: 2rem;
+      bottom: 2.5rem;
+      right: 2.5rem;
       z-index: 20;
-      font-size: 0.65rem;
-      letter-spacing: 0.08em;
+      font-size: 0.55rem;
+      letter-spacing: 0.15em;
       text-transform: uppercase;
-      color: var(--pewter);
+      color: rgba(113,113,122,0.5);
+      opacity: 1;
+      transition: opacity 0.6s ease;
     }
+    .zoom-hint.faded { opacity: 0; }
+
+    /* FPS — bottom left */
+    .fps-counter {
+      position: fixed;
+      bottom: 2.5rem;
+      left: 2.5rem;
+      z-index: 20;
+      font-family: var(--font-body);
+      font-size: 0.55rem;
+      letter-spacing: 0.1em;
+      color: rgba(113,113,122,0.4);
+      display: none;
+    }
+    .fps-counter.visible { display: block; }
 
     /* ========================================
-       EXPANDED CARD OVERLAY
+       CARD OVERLAY
     ======================================== */
     #card-overlay {
       position: fixed;
       inset: 0;
       z-index: 100;
-      background: rgba(9,9,11,0.92);
+      background: rgba(9,9,11,0.94);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       display: flex;
       align-items: center;
       justify-content: center;
+      flex-direction: column;
       opacity: 0;
       visibility: hidden;
-      transition: opacity 0.4s ease, visibility 0.4s ease;
-      cursor: pointer;
+      transition: opacity 0.5s ease, visibility 0.5s ease;
+      cursor: none;
     }
     #card-overlay.visible {
       opacity: 1;
       visibility: visible;
     }
     #card-overlay img {
-      max-width: 80vw;
-      max-height: 80vh;
+      max-width: 75vw;
+      max-height: 75vh;
       object-fit: contain;
+      opacity: 0;
+      transform: scale(0.95);
+      transition: opacity 0.5s ease 0.1s, transform 0.5s ease 0.1s;
     }
-    #card-overlay .card-meta {
+    #card-overlay.visible img {
+      opacity: 1;
+      transform: scale(1);
+    }
+    .overlay-meta {
       position: absolute;
-      bottom: 2rem;
+      bottom: 2.5rem;
       left: 50%;
       transform: translateX(-50%);
       text-align: center;
+      display: flex;
+      gap: 2rem;
+      align-items: center;
     }
-    #card-overlay .card-meta span {
-      font-size: 0.65rem;
-      letter-spacing: 0.08em;
+    .overlay-meta span {
+      font-size: 0.55rem;
+      letter-spacing: 0.15em;
       text-transform: uppercase;
       color: var(--pewter);
     }
+    .overlay-close {
+      position: absolute;
+      top: 2.5rem;
+      right: 2.5rem;
+      font-size: 0.55rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--pewter);
+      cursor: none;
+      background: none;
+      border: none;
+      font-family: var(--font-body);
+      transition: color 0.3s ease;
+    }
+    .overlay-close:hover { color: var(--gallery-white); }
 
     /* ========================================
        RESPONSIVE
     ======================================== */
     @media (max-width: 768px) {
-      .title-bar { top: 1rem; left: 1rem; }
-      .image-count { top: 1rem; right: 1rem; }
-      .view-toggle { bottom: 1rem; }
+      html, body { cursor: auto; }
+      .cursor-dot, .cursor-ring { display: none; }
+      .title-bar { top: 1.25rem; left: 1.25rem; }
+      .image-count { top: 1.25rem; right: 1.25rem; }
+      .view-toggle { bottom: 1.25rem; }
+      .zoom-hint { display: none; }
+      .view-toggle button { cursor: pointer; }
+      .overlay-close { cursor: pointer; }
     }
 
     /* ========================================
@@ -236,12 +375,18 @@
 </head>
 <body>
 
+  <!-- CUSTOM CURSOR -->
+  <div class="cursor-dot" id="cursor-dot"></div>
+  <div class="cursor-ring" id="cursor-ring"></div>
+
   <!-- LOADER -->
   <div id="loader">
-    <div class="loader-text">Loading</div>
-    <div class="progress-bar">
-      <div class="progress-fill" id="progress-fill"></div>
+    <div class="loader-overline">Collection</div>
+    <div class="loader-title">Globe Gallery</div>
+    <div class="loader-bar">
+      <div class="loader-fill" id="loader-fill"></div>
     </div>
+    <div class="loader-pct" id="loader-pct">0%</div>
   </div>
 
   <!-- THREE.JS CANVAS -->
@@ -249,22 +394,28 @@
 
   <!-- UI OVERLAY -->
   <div id="ui-overlay">
-    <div class="title-bar">
+    <div class="title-bar" id="title-bar">
+      <div class="overline">Interactive Collection</div>
       <h1>Globe Gallery</h1>
-      <p>Interactive collection</p>
     </div>
-    <div class="image-count" id="image-count"></div>
-    <div class="view-toggle">
+    <div class="image-count" id="image-count">
+      <div class="number" id="count-number">0</div>
+      <div class="label">Works</div>
+    </div>
+    <div class="view-toggle" id="view-toggle">
       <button class="active" data-view="globe">Globe</button>
       <button data-view="grid">Grid</button>
     </div>
+    <div class="zoom-hint" id="zoom-hint">Scroll to zoom</div>
+    <div class="fps-counter" id="fps-counter">60 FPS</div>
   </div>
 
-  <!-- EXPANDED CARD OVERLAY -->
+  <!-- CARD OVERLAY -->
   <div id="card-overlay">
-    <img id="card-overlay-img" src="" alt="">
-    <div class="card-meta">
-      <span id="card-overlay-meta"></span>
+    <button class="overlay-close" id="overlay-close">Close [Esc]</button>
+    <img id="overlay-img" src="" alt="">
+    <div class="overlay-meta">
+      <span id="overlay-index"></span>
     </div>
   </div>
 
@@ -277,121 +428,241 @@
     'use strict';
 
     // ========================================
-    // CONSTANTS
+    // 1. CONSTANTS & CONFIG
     // ========================================
-    const IMAGES = [
-      'images/1.webp','images/2.webp','images/3.webp','images/10.webp',
-      'images/11.webp','images/12.webp','images/13.webp','images/15 (1).webp',
-      'images/15 (2).webp','images/16.webp','images/17.webp','images/18.webp',
-      'images/19.webp','images/20.webp','images/21.webp','images/22.webp',
-      'images/23.webp','images/24.webp','images/25.webp','images/26.webp',
-      'images/27.webp','images/28.webp','images/30.webp','images/31.webp',
-      'images/32.webp','images/33.webp','images/34.webp','images/35.webp',
-      'images/36.webp','images/37.webp'
+    var IMAGES = [
+      'images/1.webp','images/2.webp','images/3.webp','images/4.webp',
+      'images/5.webp','images/6.webp','images/7.webp','images/8.webp',
+      'images/9.webp','images/10.webp','images/11.webp','images/12.webp',
+      'images/13.webp','images/15 (1).webp','images/15 (2).webp',
+      'images/16.webp','images/17.webp','images/18.webp','images/19.webp',
+      'images/20.webp','images/21.webp','images/22.webp','images/23.webp',
+      'images/24.webp','images/25.webp','images/26.webp','images/27.webp',
+      'images/28.webp','images/30.webp','images/31.webp','images/32.webp',
+      'images/33.webp','images/34.webp','images/35.webp','images/36.webp',
+      'images/37.webp','images/38.webp','images/39.webp','images/40.webp',
+      'images/41.webp','images/42.webp'
     ];
 
-    const GLOBE_RADIUS = 5;
-    const CARD_WIDTH = 1.2;
-    const CARD_HEIGHT = 1.2;
-    const ROTATION_SPEED = 0.001;
-    const DAMPING = 0.95;
+    var GLOBE_RADIUS = 5.5;
+    var CARD_W = 1.3;
+    var CARD_H = 1.3;
+    var DAMPING = 0.94;
+    var AUTO_ROTATE = 0.0008;
+    var PARTICLE_COUNT = 200;
 
-    let currentView = 'globe'; // 'globe' | 'grid'
-    let isTransitioning = false;
-    let isDragging = false;
-    let previousMouseX = 0;
-    let previousMouseY = 0;
-    let rotationVelocityX = 0;
-    let rotationVelocityY = 0;
-    let autoRotateSpeed = ROTATION_SPEED;
-    let hoveredCard = null;
-    let loadedCount = 0;
+    var currentView = 'globe';
+    var isTransitioning = false;
+    var isDragging = false;
+    var prevMX = 0, prevMY = 0;
+    var velX = 0, velY = 0;
+    var autoSpeed = AUTO_ROTATE;
+    var hoveredCard = null;
+    var loadedCount = 0;
+    var targetZoom = 18;
+    var currentZoom = 18;
+    var introPlayed = false;
+    var showFPS = false;
+    var morphingGlobeRotation = false;
 
-    // Three.js globals
-    let renderer, scene, camera, raycaster, mouse;
-    let globeGroup, cards = [];
-    let clock;
+    // Preallocated vectors (no allocations in render loop)
+    var _raycaster = null;
+    var _mouse = new THREE.Vector2(-999, -999);
+    var _vec3 = new THREE.Vector3();
+
+    // Three.js
+    var renderer, scene, camera, globeGroup, particleSystem;
+    var cards = [];
+    var clock;
+
+    // Cursor
+    var cursorDot = document.getElementById('cursor-dot');
+    var cursorRing = document.getElementById('cursor-ring');
+    var cursorX = 0, cursorY = 0;
+    var ringX = 0, ringY = 0;
+    var isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
 
     // ========================================
-    // FIBONACCI SPHERE DISTRIBUTION
+    // 2. CUSTOM CURSOR
     // ========================================
-    function fibonacciSphere(index, total, radius) {
-      const goldenAngle = Math.PI * (3 - Math.sqrt(5));
-      const y = 1 - (index / (total - 1)) * 2;
-      const radiusAtY = Math.sqrt(1 - y * y);
-      const theta = goldenAngle * index;
+    function updateCursor() {
+      if (isMobile) return;
+      gsap.set(cursorDot, { x: cursorX, y: cursorY });
+      // Ring follows with lerp
+      ringX += (cursorX - ringX) * 0.15;
+      ringY += (cursorY - ringY) * 0.15;
+      gsap.set(cursorRing, { x: ringX, y: ringY });
+    }
+
+    // ========================================
+    // 3. FIBONACCI SPHERE
+    // ========================================
+    function fibSphere(i, total, r) {
+      var golden = Math.PI * (3 - Math.sqrt(5));
+      var y = 1 - (i / (total - 1)) * 2;
+      var rAtY = Math.sqrt(1 - y * y);
+      var theta = golden * i;
       return new THREE.Vector3(
-        Math.cos(theta) * radiusAtY * radius,
-        y * radius,
-        Math.sin(theta) * radiusAtY * radius
+        Math.cos(theta) * rAtY * r,
+        y * r,
+        Math.sin(theta) * rAtY * r
       );
     }
 
     // ========================================
-    // GRID POSITIONS
+    // 4. GRID POSITIONS
     // ========================================
-    function gridPosition(index, total) {
-      const cols = Math.ceil(Math.sqrt(total));
-      const spacing = CARD_WIDTH * 1.3;
-      const col = index % cols;
-      const row = Math.floor(index / cols);
-      const offsetX = -(cols - 1) * spacing * 0.5;
-      const offsetY = -(Math.ceil(total / cols) - 1) * spacing * 0.5;
+    function gridPos(i, total) {
+      var cols = Math.ceil(Math.sqrt(total * 1.5)); // wider grid
+      var spacing = CARD_W * 1.25;
+      var col = i % cols;
+      var row = Math.floor(i / cols);
+      var rows = Math.ceil(total / cols);
+      var ox = -(cols - 1) * spacing * 0.5;
+      var oy = (rows - 1) * spacing * 0.5;
       return new THREE.Vector3(
-        offsetX + col * spacing,
-        -(offsetY + row * spacing),
+        ox + col * spacing,
+        oy - row * spacing,
         0
       );
     }
 
     // ========================================
-    // INIT THREE.JS
+    // 5. LIQUID DISTORTION SHADER
+    // ========================================
+    var liquidVertexShader = [
+      'varying vec2 vUv;',
+      'void main() {',
+      '  vUv = uv;',
+      '  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
+      '}'
+    ].join('\n');
+
+    var liquidFragmentShader = [
+      'uniform sampler2D uTexture;',
+      'uniform float uTime;',
+      'uniform float uHover;',
+      'uniform float uDistortion;',
+      'uniform vec3 fogColor;',
+      'uniform float fogDensity;',
+      'varying vec2 vUv;',
+      '',
+      'void main() {',
+      '  vec2 uv = vUv;',
+      '  // Liquid ripple on hover',
+      '  float dist = length(uv - 0.5);',
+      '  float ripple = sin(dist * 12.0 - uTime * 3.0) * 0.015 * uHover;',
+      '  float wave = sin(uv.y * 8.0 + uTime * 1.5) * 0.008 * uHover;',
+      '  uv.x += ripple + wave;',
+      '  uv.y += ripple * 0.7;',
+      '  // Subtle chromatic split on hover',
+      '  float shift = 0.003 * uHover;',
+      '  float r = texture2D(uTexture, uv + vec2(shift, 0.0)).r;',
+      '  float g = texture2D(uTexture, uv).g;',
+      '  float b = texture2D(uTexture, uv - vec2(shift, 0.0)).b;',
+      '  float a = texture2D(uTexture, uv).a;',
+      '  // Slight brightness boost on hover',
+      '  vec3 col = vec3(r, g, b) * (1.0 + 0.08 * uHover);',
+      '  // Fog',
+      '  float depth = gl_FragCoord.z / gl_FragCoord.w;',
+      '  float fogFactor = 1.0 - exp(-fogDensity * fogDensity * depth * depth);',
+      '  col = mix(col, fogColor, fogFactor);',
+      '  gl_FragColor = vec4(col, a);',
+      '}'
+    ].join('\n');
+
+    // ========================================
+    // 6. INIT SCENE
     // ========================================
     function initScene() {
       clock = new THREE.Clock();
+
       renderer = new THREE.WebGLRenderer({
         antialias: true,
         alpha: false,
         powerPreference: 'high-performance'
       });
       renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
       renderer.setClearColor(0x09090B, 1);
       renderer.outputEncoding = THREE.sRGBEncoding;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.1;
       document.getElementById('canvas-wrap').appendChild(renderer.domElement);
 
       scene = new THREE.Scene();
-      camera = new THREE.PerspectiveCamera(
-        50,
-        window.innerWidth / window.innerHeight,
-        0.1,
-        100
-      );
-      camera.position.set(0, 0, 12);
+      scene.fog = new THREE.FogExp2(0x09090B, 0.018);
 
-      raycaster = new THREE.Raycaster();
-      mouse = new THREE.Vector2();
+      camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+      camera.position.set(0, 0, currentZoom);
 
-      // Ambient light
-      scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+      _raycaster = new THREE.Raycaster();
 
-      // Directional key light
-      const keyLight = new THREE.DirectionalLight(0xfff5e6, 0.4);
-      keyLight.position.set(5, 5, 5);
+      // Lighting — 3-point rig
+      scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+      var keyLight = new THREE.DirectionalLight(0xfff5e6, 0.5);
+      keyLight.position.set(5, 5, 8);
       scene.add(keyLight);
+      var fillLight = new THREE.DirectionalLight(0xe6f0ff, 0.2);
+      fillLight.position.set(-4, 2, -3);
+      scene.add(fillLight);
+      // Gold rim — subtle accent
+      var rimLight = new THREE.PointLight(0xB8964E, 0.3, 20);
+      rimLight.position.set(0, -6, 4);
+      scene.add(rimLight);
 
       globeGroup = new THREE.Group();
       scene.add(globeGroup);
+
+      initParticles();
     }
 
     // ========================================
-    // LOAD IMAGES AS TEXTURED CARDS
+    // 7. AMBIENT PARTICLES
+    // ========================================
+    function initParticles() {
+      var geo = new THREE.BufferGeometry();
+      var positions = new Float32Array(PARTICLE_COUNT * 3);
+      var alphas = new Float32Array(PARTICLE_COUNT);
+      for (var i = 0; i < PARTICLE_COUNT; i++) {
+        positions[i * 3]     = (Math.random() - 0.5) * 30;
+        positions[i * 3 + 1] = (Math.random() - 0.5) * 30;
+        positions[i * 3 + 2] = (Math.random() - 0.5) * 30;
+        alphas[i] = Math.random() * 0.4 + 0.1;
+      }
+      geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geo.setAttribute('alpha', new THREE.BufferAttribute(alphas, 1));
+
+      var mat = new THREE.PointsMaterial({
+        color: 0xFAFAF9,
+        size: 0.03,
+        transparent: true,
+        opacity: 0.4,
+        sizeAttenuation: true,
+        depthWrite: false
+      });
+      particleSystem = new THREE.Points(geo, mat);
+      scene.add(particleSystem);
+    }
+
+    function updateParticles(time) {
+      var pos = particleSystem.geometry.attributes.position.array;
+      for (var i = 0; i < PARTICLE_COUNT; i++) {
+        pos[i * 3 + 1] += Math.sin(time + i * 0.1) * 0.001;
+        pos[i * 3]     += Math.cos(time * 0.5 + i * 0.2) * 0.0005;
+      }
+      particleSystem.geometry.attributes.position.needsUpdate = true;
+      particleSystem.rotation.y = time * 0.01;
+    }
+
+    // ========================================
+    // 8. LOAD IMAGES AS SHADER CARDS
     // ========================================
     function loadCards() {
-      const textureLoader = new THREE.TextureLoader();
-      const total = IMAGES.length;
+      var textureLoader = new THREE.TextureLoader();
+      var total = IMAGES.length;
 
-      document.getElementById('image-count').textContent = total + ' works';
+      document.getElementById('count-number').textContent = total;
 
       IMAGES.forEach(function(src, i) {
         textureLoader.load(src, function(texture) {
@@ -399,50 +670,72 @@
           texture.minFilter = THREE.LinearFilter;
           texture.magFilter = THREE.LinearFilter;
 
-          // Determine aspect ratio
           var aspect = texture.image.width / texture.image.height;
-          var w = CARD_WIDTH;
-          var h = CARD_HEIGHT;
-          if (aspect > 1) {
-            h = w / aspect;
-          } else {
-            w = h * aspect;
-          }
+          var w = CARD_W;
+          var h = CARD_H;
+          if (aspect > 1.2) { h = w / aspect; }
+          else if (aspect < 0.8) { w = h * aspect; }
 
-          var geometry = new THREE.PlaneGeometry(w, h);
-          var material = new THREE.MeshBasicMaterial({
-            map: texture,
+          var geo = new THREE.PlaneGeometry(w, h, 1, 1);
+
+          // Shader material with liquid distortion
+          var mat = new THREE.ShaderMaterial({
+            uniforms: {
+              uTexture: { value: texture },
+              uTime: { value: 0 },
+              uHover: { value: 0 },
+              uDistortion: { value: 0 },
+              fogColor: { value: new THREE.Color(0x09090B) },
+              fogDensity: { value: 0.018 }
+            },
+            vertexShader: liquidVertexShader,
+            fragmentShader: liquidFragmentShader,
             side: THREE.DoubleSide,
-            transparent: true,
-            opacity: 1
+            transparent: true
           });
 
-          var mesh = new THREE.Mesh(geometry, material);
+          var mesh = new THREE.Mesh(geo, mat);
 
-          // Globe position
-          var globePos = fibonacciSphere(i, total, GLOBE_RADIUS);
-          mesh.position.copy(globePos);
+          // Globe position via Fibonacci
+          var gp = fibSphere(i, total, GLOBE_RADIUS);
+          mesh.position.copy(gp);
           mesh.lookAt(0, 0, 0);
-          mesh.rotateY(Math.PI); // face outward
+          mesh.rotateY(Math.PI);
 
-          // Store data
+          // Unique per-card rotation offset for "hand-placed" feel
+          var uniqueAngle = (Math.random() - 0.5) * 0.12;
+          mesh.rotateZ(uniqueAngle);
+
           mesh.userData = {
             index: i,
             src: src,
-            globePos: globePos.clone(),
+            globePos: gp.clone(),
             globeQuat: mesh.quaternion.clone(),
-            gridPos: gridPosition(i, total),
+            gridPos: gridPos(i, total),
             gridQuat: new THREE.Quaternion(),
-            baseScale: 1
+            uniqueAngle: uniqueAngle,
+            breathOffset: Math.random() * Math.PI * 2,
+            breathSpeed: 0.3 + Math.random() * 0.4
           };
+
+          mesh.material.uniforms.uHover.value = 0;
+          mesh.scale.set(0.001, 0.001, 0.001);
+
+          // Animation targets (lerped in render loop, no GSAP dependency)
+          mesh.userData.targetScale = 0.001;
+          mesh.userData.currentScale = 0.001;
+          mesh.userData.targetHover = 0;
+          mesh.userData.currentHover = 0;
+          mesh.userData.revealDelay = 0; // set in onAllLoaded
+          mesh.userData.revealTime = 0;
 
           cards.push(mesh);
           globeGroup.add(mesh);
 
-          // Loading progress
           loadedCount++;
           var pct = Math.round((loadedCount / total) * 100);
-          document.getElementById('progress-fill').style.width = pct + '%';
+          document.getElementById('loader-fill').style.width = pct + '%';
+          document.getElementById('loader-pct').textContent = pct + '%';
 
           if (loadedCount === total) {
             onAllLoaded();
@@ -452,149 +745,141 @@
     }
 
     // ========================================
-    // ON ALL IMAGES LOADED
+    // 9. INTRO SEQUENCE
     // ========================================
     function onAllLoaded() {
+      // Hide UI initially
+      var uiEls = ['title-bar', 'image-count', 'view-toggle', 'zoom-hint'];
+      uiEls.forEach(function(id) {
+        var el = document.getElementById(id);
+        el.style.opacity = '0';
+        el.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
+      });
+
       setTimeout(function() {
         document.getElementById('loader').classList.add('hidden');
+
+        // Dolly camera in
+        targetZoom = 10;
+
+        // Set card reveal targets with staggered delays
+        var revealStart = performance.now() + 300;
+        cards.forEach(function(card, i) {
+          card.userData.targetScale = 1;
+          card.userData.revealDelay = revealStart + i * 25;
+        });
+
+        // Fade in UI via CSS transitions
+        setTimeout(function() {
+          document.getElementById('title-bar').style.opacity = '1';
+        }, 800);
+        setTimeout(function() {
+          document.getElementById('image-count').style.opacity = '1';
+        }, 900);
+        setTimeout(function() {
+          document.getElementById('view-toggle').style.opacity = '1';
+        }, 1000);
+        setTimeout(function() {
+          document.getElementById('zoom-hint').style.opacity = '1';
+        }, 1400);
+
+        introPlayed = true;
+
+        setTimeout(function() {
+          document.getElementById('zoom-hint').classList.add('faded');
+        }, 6000);
       }, 400);
     }
 
     // ========================================
-    // VIEW MORPHING
+    // 10. VIEW MORPHING
     // ========================================
-    function morphToGlobe() {
-      if (isTransitioning) return;
+    function morphTo(view) {
+      if (isTransitioning || view === currentView) return;
       isTransitioning = true;
-      currentView = 'globe';
-      autoRotateSpeed = ROTATION_SPEED;
+      currentView = view;
 
-      // Reset globe group rotation smoothly
-      gsap.to(globeGroup.rotation, {
-        x: 0, y: 0, z: 0,
-        duration: 0.6,
-        ease: 'power2.inOut'
-      });
+      var isGlobe = view === 'globe';
+      autoSpeed = isGlobe ? AUTO_ROTATE : 0;
+      targetZoom = isGlobe ? 10 : 8;
 
-      cards.forEach(function(card) {
+      // Set morph targets on each card
+      cards.forEach(function(card, i) {
         var d = card.userData;
-        gsap.to(card.position, {
-          x: d.globePos.x,
-          y: d.globePos.y,
-          z: d.globePos.z,
-          duration: 1.2,
-          ease: 'power3.inOut',
-          delay: Math.random() * 0.2
-        });
-        // Slerp quaternion via proxy
-        var proxy = { t: 0 };
-        var startQuat = card.quaternion.clone();
-        gsap.to(proxy, {
-          t: 1,
-          duration: 1.2,
-          ease: 'power3.inOut',
-          delay: Math.random() * 0.2,
-          onUpdate: function() {
-            card.quaternion.slerpQuaternions(startQuat, d.globeQuat, proxy.t);
-          }
-        });
+        var tp = isGlobe ? d.globePos : d.gridPos;
+        var tq = isGlobe ? d.globeQuat : d.gridQuat;
+        d.morphTarget = tp.clone();
+        d.morphQuat = tq.clone();
+        d.morphStartQuat = card.quaternion.clone();
+        d.morphT = 0;
+        d.morphDelay = performance.now() + Math.random() * 300;
       });
 
-      setTimeout(function() { isTransitioning = false; }, 1500);
-    }
+      // Reset globe rotation target
+      morphingGlobeRotation = true;
 
-    function morphToGrid() {
-      if (isTransitioning) return;
-      isTransitioning = true;
-      currentView = 'grid';
-      autoRotateSpeed = 0;
-
-      // Reset globe group rotation
-      gsap.to(globeGroup.rotation, {
-        x: 0, y: 0, z: 0,
-        duration: 0.8,
-        ease: 'power2.inOut'
-      });
-
-      cards.forEach(function(card) {
-        var d = card.userData;
-        gsap.to(card.position, {
-          x: d.gridPos.x,
-          y: d.gridPos.y,
-          z: d.gridPos.z,
-          duration: 1.2,
-          ease: 'power3.inOut',
-          delay: Math.random() * 0.2
-        });
-        // Face camera
-        var proxy = { t: 0 };
-        var startQuat = card.quaternion.clone();
-        gsap.to(proxy, {
-          t: 1,
-          duration: 1.2,
-          ease: 'power3.inOut',
-          delay: Math.random() * 0.2,
-          onUpdate: function() {
-            card.quaternion.slerpQuaternions(startQuat, d.gridQuat, proxy.t);
-          }
-        });
-      });
-
-      setTimeout(function() { isTransitioning = false; }, 1500);
+      setTimeout(function() {
+        isTransitioning = false;
+        morphingGlobeRotation = false;
+      }, 2000);
     }
 
     // ========================================
-    // INTERACTION — DRAG TO ROTATE
+    // 11. INTERACTION
     // ========================================
     function onPointerDown(e) {
       isDragging = true;
-      previousMouseX = e.clientX;
-      previousMouseY = e.clientY;
-      autoRotateSpeed = 0;
+      prevMX = e.clientX;
+      prevMY = e.clientY;
+      autoSpeed = 0;
     }
 
     function onPointerMove(e) {
-      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      cursorX = e.clientX;
+      cursorY = e.clientY;
+      _mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      _mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
 
       if (isDragging && currentView === 'globe') {
-        var dx = e.clientX - previousMouseX;
-        var dy = e.clientY - previousMouseY;
-        rotationVelocityY = dx * 0.003;
-        rotationVelocityX = dy * 0.003;
-        previousMouseX = e.clientX;
-        previousMouseY = e.clientY;
+        velY = (e.clientX - prevMX) * 0.004;
+        velX = (e.clientY - prevMY) * 0.004;
+        prevMX = e.clientX;
+        prevMY = e.clientY;
       }
     }
 
     function onPointerUp() {
       isDragging = false;
       if (currentView === 'globe') {
-        // Restore auto-rotate after momentum dies
         setTimeout(function() {
-          if (!isDragging) autoRotateSpeed = ROTATION_SPEED;
-        }, 3000);
+          if (!isDragging) autoSpeed = AUTO_ROTATE;
+        }, 2500);
       }
+    }
+
+    function onWheel(e) {
+      e.preventDefault();
+      targetZoom += e.deltaY * 0.005;
+      targetZoom = Math.max(6, Math.min(20, targetZoom));
     }
 
     function onClick(e) {
-      raycaster.setFromCamera(mouse, camera);
-      var intersects = raycaster.intersectObjects(cards);
-      if (intersects.length > 0 && !isTransitioning) {
-        var card = intersects[0].object;
-        showOverlay(card.userData.src, card.userData.index);
+      if (!introPlayed || isTransitioning) return;
+      _raycaster.setFromCamera(_mouse, camera);
+      var hits = _raycaster.intersectObjects(cards);
+      if (hits.length > 0) {
+        showOverlay(hits[0].object.userData);
       }
     }
 
     // ========================================
-    // CARD OVERLAY
+    // 12. OVERLAY
     // ========================================
-    function showOverlay(src, index) {
+    function showOverlay(data) {
       var overlay = document.getElementById('card-overlay');
-      var img = document.getElementById('card-overlay-img');
-      var meta = document.getElementById('card-overlay-meta');
-      img.src = src;
-      meta.textContent = (index + 1) + ' / ' + IMAGES.length;
+      document.getElementById('overlay-img').src = data.src;
+      document.getElementById('overlay-index').textContent =
+        (data.index + 1) + ' / ' + IMAGES.length;
       overlay.classList.add('visible');
     }
 
@@ -603,48 +888,128 @@
     }
 
     // ========================================
-    // RENDER LOOP
+    // 13. RENDER LOOP
     // ========================================
+    var frames = 0, fpsTime = 0;
+
     function animate() {
       requestAnimationFrame(animate);
 
+      var delta = clock.getDelta();
+      var time = clock.elapsedTime;
+
+      // FPS counter
+      frames++;
+      fpsTime += delta;
+      if (fpsTime >= 1) {
+        if (showFPS) {
+          document.getElementById('fps-counter').textContent = frames + ' FPS';
+        }
+        frames = 0;
+        fpsTime = 0;
+      }
+
+      // Smooth zoom
+      currentZoom += (targetZoom - currentZoom) * 0.07;
+      camera.position.z = currentZoom;
+
       if (currentView === 'globe') {
         // Auto-rotate
-        globeGroup.rotation.y += autoRotateSpeed;
+        globeGroup.rotation.y += autoSpeed;
 
-        // Momentum from drag
+        // Drag momentum
         if (!isDragging) {
-          globeGroup.rotation.y += rotationVelocityY;
-          globeGroup.rotation.x += rotationVelocityX;
-          rotationVelocityY *= DAMPING;
-          rotationVelocityX *= DAMPING;
+          globeGroup.rotation.y += velY;
+          globeGroup.rotation.x += velX;
+          velY *= DAMPING;
+          velX *= DAMPING;
         }
+
+        // Card breathing — subtle float (only when not morphing)
+        if (!isTransitioning) {
+          for (var i = 0; i < cards.length; i++) {
+            var c = cards[i];
+            var d = c.userData;
+            var breath = Math.sin(time * d.breathSpeed + d.breathOffset) * 0.06;
+            c.position.x = d.globePos.x + breath * 0.3;
+            c.position.y = d.globePos.y + breath;
+            c.position.z = d.globePos.z + breath * 0.2;
+          }
+        }
+      }
+
+      // Lerp globe rotation toward zero during morph
+      if (morphingGlobeRotation) {
+        globeGroup.rotation.x += (0 - globeGroup.rotation.x) * 0.06;
+        globeGroup.rotation.y += (0 - globeGroup.rotation.y) * 0.06;
+        globeGroup.rotation.z += (0 - globeGroup.rotation.z) * 0.06;
+      }
+
+      // Morph card positions/quaternions toward targets
+      if (isTransitioning) {
+        for (var m = 0; m < cards.length; m++) {
+          var mc = cards[m];
+          var md = mc.userData;
+          if (md.morphTarget && performance.now() >= md.morphDelay) {
+            md.morphT = Math.min(md.morphT + 0.04, 1);
+            mc.position.lerp(md.morphTarget, 0.06);
+            mc.quaternion.slerp(md.morphQuat, 0.06);
+          }
+        }
+      }
+
+      // Lerp scale, hover, and update shader uniforms
+      var now = performance.now();
+      for (var j = 0; j < cards.length; j++) {
+        var c = cards[j];
+        var d = c.userData;
+
+        // Staggered reveal — don't start lerping until delay passed
+        if (now >= d.revealDelay && d.targetScale > d.currentScale) {
+          d.currentScale += (d.targetScale - d.currentScale) * 0.08;
+          if (d.targetScale - d.currentScale < 0.001) d.currentScale = d.targetScale;
+        }
+
+        // Hover lerp
+        d.currentHover += (d.targetHover - d.currentHover) * 0.1;
+
+        c.scale.set(d.currentScale, d.currentScale, d.currentScale);
+        c.material.uniforms.uHover.value = d.currentHover;
+        c.material.uniforms.uTime.value = time;
       }
 
       // Hover detection
-      raycaster.setFromCamera(mouse, camera);
-      var intersects = raycaster.intersectObjects(cards);
+      _raycaster.setFromCamera(_mouse, camera);
+      var intersects = _raycaster.intersectObjects(cards);
 
       if (hoveredCard && (!intersects.length || intersects[0].object !== hoveredCard)) {
-        gsap.to(hoveredCard.scale, { x: 1, y: 1, z: 1, duration: 0.3, ease: 'power2.out' });
-        document.body.style.cursor = 'default';
+        hoveredCard.userData.targetScale = 1;
+        hoveredCard.userData.targetHover = 0;
+        cursorRing.classList.remove('hovering');
         hoveredCard = null;
       }
 
-      if (intersects.length > 0 && !isTransitioning) {
+      if (intersects.length > 0 && !isTransitioning && introPlayed) {
         var target = intersects[0].object;
         if (target !== hoveredCard) {
           hoveredCard = target;
-          gsap.to(hoveredCard.scale, { x: 1.15, y: 1.15, z: 1.15, duration: 0.3, ease: 'power2.out' });
-          document.body.style.cursor = 'pointer';
+          hoveredCard.userData.targetScale = 1.12;
+          hoveredCard.userData.targetHover = 1;
+          cursorRing.classList.add('hovering');
         }
       }
+
+      // Particles
+      updateParticles(time);
+
+      // Cursor
+      updateCursor();
 
       renderer.render(scene, camera);
     }
 
     // ========================================
-    // RESIZE
+    // 14. RESIZE
     // ========================================
     function onResize() {
       camera.aspect = window.innerWidth / window.innerHeight;
@@ -653,31 +1018,44 @@
     }
 
     // ========================================
-    // VIEW TOGGLE BUTTONS
+    // 15. VIEW TOGGLE
     // ========================================
     function initViewToggle() {
-      var buttons = document.querySelectorAll('.view-toggle button');
-      buttons.forEach(function(btn) {
+      var btns = document.querySelectorAll('.view-toggle button');
+      btns.forEach(function(btn) {
         btn.addEventListener('click', function() {
-          var view = this.getAttribute('data-view');
-          if (view === currentView) return;
-          buttons.forEach(function(b) { b.classList.remove('active'); });
+          var v = this.getAttribute('data-view');
+          btns.forEach(function(b) { b.classList.remove('active'); });
           this.classList.add('active');
-          if (view === 'globe') morphToGlobe();
-          if (view === 'grid') morphToGrid();
+          morphTo(v);
         });
       });
     }
 
     // ========================================
-    // KEYBOARD
+    // 16. KEYBOARD
     // ========================================
     function onKeyDown(e) {
       if (e.key === 'Escape') hideOverlay();
+      if (e.key === 'f' || e.key === 'F') {
+        showFPS = !showFPS;
+        document.getElementById('fps-counter').classList.toggle('visible', showFPS);
+      }
     }
 
     // ========================================
-    // BOOT
+    // 17. VISIBILITY — PAUSE WHEN HIDDEN
+    // ========================================
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden) {
+        clock.stop();
+      } else {
+        clock.start();
+      }
+    });
+
+    // ========================================
+    // 18. BOOT
     // ========================================
     function init() {
       initScene();
@@ -688,7 +1066,12 @@
       canvas.addEventListener('pointerdown', onPointerDown);
       window.addEventListener('pointermove', onPointerMove);
       window.addEventListener('pointerup', onPointerUp);
+      canvas.addEventListener('wheel', onWheel, { passive: false });
       canvas.addEventListener('click', onClick);
+      document.getElementById('overlay-close').addEventListener('click', function(e) {
+        e.stopPropagation();
+        hideOverlay();
+      });
       document.getElementById('card-overlay').addEventListener('click', hideOverlay);
       window.addEventListener('resize', onResize);
       window.addEventListener('keydown', onKeyDown);
