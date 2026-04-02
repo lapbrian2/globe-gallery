@@ -117,6 +117,11 @@
       color: var(--gallery-white);
       letter-spacing: -0.02em;
       margin-bottom: 3rem;
+      animation: loaderPulse 2.5s ease-in-out infinite;
+    }
+    @keyframes loaderPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
     }
     .loader-bar {
       width: 160px;
@@ -239,6 +244,9 @@
       text-transform: uppercase;
       cursor: none;
       transition: color 0.3s ease, background 0.3s ease;
+    }
+    .view-toggle button + button {
+      border-left: 1px solid rgba(184,150,78,0.15);
     }
     .view-toggle button.active {
       color: var(--gallery-white);
@@ -450,7 +458,7 @@
       <button class="active" data-view="globe">Globe</button>
       <button data-view="grid">Grid</button>
     </div>
-    <div class="zoom-hint" id="zoom-hint">Scroll to zoom</div>
+    <div class="zoom-hint" id="zoom-hint">Scroll to zoom &middot; Drag to orbit</div>
     <div class="fps-counter" id="fps-counter">60 FPS</div>
   </div>
 
@@ -678,16 +686,19 @@
     // 4. GRID POSITIONS
     // ========================================
     function gridPos(i, total) {
-      var cols = Math.ceil(Math.sqrt(total * 1.5)); // wider grid
-      var spacing = CARD_W * 1.25;
+      var cols = Math.ceil(Math.sqrt(total * 1.6));
+      var spacingX = CARD_W * 1.2;
+      var spacingY = CARD_H * 1.25;
       var col = i % cols;
       var row = Math.floor(i / cols);
       var rows = Math.ceil(total / cols);
-      var ox = -(cols - 1) * spacing * 0.5;
-      var oy = (rows - 1) * spacing * 0.5;
+      var ox = -(cols - 1) * spacingX * 0.5;
+      var oy = (rows - 1) * spacingY * 0.5;
+      // Stagger odd rows for masonry feel
+      var stagger = (row % 2 === 1) ? spacingX * 0.4 : 0;
       return new THREE.Vector3(
-        ox + col * spacing,
-        oy - row * spacing,
+        ox + col * spacingX + stagger,
+        oy - row * spacingY,
         0
       );
     }
@@ -825,16 +836,27 @@
       globeGroup = new THREE.Group();
       scene.add(globeGroup);
 
-      // Wireframe globe skeleton
-      var wireGeo = new THREE.IcosahedronGeometry(GLOBE_RADIUS * 0.98, 2);
+      // Wireframe globe skeleton with vertex color shimmer
+      var wireGeo = new THREE.IcosahedronGeometry(GLOBE_RADIUS * 0.98, 3);
+      var wireVertCount = wireGeo.attributes.position.count;
+      var wireColors = new Float32Array(wireVertCount * 3);
+      for (var wv = 0; wv < wireVertCount; wv++) {
+        // Base gold with per-vertex variation for shimmer
+        wireColors[wv * 3]     = 0.722 + (Math.random() - 0.5) * 0.15;
+        wireColors[wv * 3 + 1] = 0.588 + (Math.random() - 0.5) * 0.12;
+        wireColors[wv * 3 + 2] = 0.306 + (Math.random() - 0.5) * 0.08;
+      }
+      wireGeo.setAttribute('color', new THREE.BufferAttribute(wireColors, 3));
       var wireMat = new THREE.MeshBasicMaterial({
-        color: 0xB8964E,
+        vertexColors: true,
         wireframe: true,
         transparent: true,
-        opacity: 0.04,
+        opacity: 0.06,
         depthWrite: false
       });
       wireframeGlobe = new THREE.Mesh(wireGeo, wireMat);
+      wireframeGlobe.userData.colors = wireColors;
+      wireframeGlobe.userData.vertCount = wireVertCount;
       globeGroup.add(wireframeGlobe);
 
       initParticles();
@@ -860,12 +882,36 @@
         color: 0xFAFAF9,
         size: 0.03,
         transparent: true,
-        opacity: 0.4,
+        opacity: 0.35,
         sizeAttenuation: true,
         depthWrite: false
       });
       particleSystem = new THREE.Points(geo, mat);
       scene.add(particleSystem);
+
+      // Second particle layer — gold dust, smaller, closer
+      var goldGeo = new THREE.BufferGeometry();
+      var goldCount = 120;
+      var goldPos = new Float32Array(goldCount * 3);
+      for (var gi = 0; gi < goldCount; gi++) {
+        goldPos[gi * 3]     = (Math.random() - 0.5) * 20;
+        goldPos[gi * 3 + 1] = (Math.random() - 0.5) * 20;
+        goldPos[gi * 3 + 2] = (Math.random() - 0.5) * 20;
+      }
+      goldGeo.setAttribute('position', new THREE.BufferAttribute(goldPos, 3));
+      var goldMat = new THREE.PointsMaterial({
+        color: 0xB8964E,
+        size: 0.025,
+        transparent: true,
+        opacity: 0.25,
+        sizeAttenuation: true,
+        depthWrite: false
+      });
+      var goldParticles = new THREE.Points(goldGeo, goldMat);
+      goldParticles.userData.positions = goldPos;
+      goldParticles.userData.count = goldCount;
+      scene.add(goldParticles);
+      window._goldParticles = goldParticles;
     }
 
     function updateParticles(time) {
@@ -884,6 +930,25 @@
       }
       particleSystem.geometry.attributes.position.needsUpdate = true;
       particleSystem.rotation.y = time * 0.008;
+
+      // Gold dust layer — slower, dreamier drift
+      var gp = window._goldParticles;
+      if (gp) {
+        var gpos = gp.userData.positions;
+        var gc = gp.userData.count;
+        for (var gi = 0; gi < gc; gi++) {
+          var gidx = gi * 3;
+          var gseed = gi * 0.219;
+          gpos[gidx]     += Math.sin(time * 0.15 + gseed * 4.3) * 0.0006;
+          gpos[gidx + 1] += Math.cos(time * 0.1 + gseed * 3.1) * 0.0008;
+          gpos[gidx + 2] += Math.sin(time * 0.2 + gseed * 5.7) * 0.0004;
+          if (Math.abs(gpos[gidx]) > 12) gpos[gidx] *= -0.7;
+          if (Math.abs(gpos[gidx + 1]) > 12) gpos[gidx + 1] *= -0.7;
+          if (Math.abs(gpos[gidx + 2]) > 12) gpos[gidx + 2] *= -0.7;
+        }
+        gp.geometry.attributes.position.needsUpdate = true;
+        gp.rotation.y = -time * 0.005;
+      }
     }
 
     // ========================================
@@ -1149,7 +1214,17 @@
     function navigateOverlay(dir) {
       if (overlayIndex < 0) return;
       overlayIndex = (overlayIndex + dir + IMAGES.length) % IMAGES.length;
-      document.getElementById('overlay-img').src = IMAGES[overlayIndex];
+      var img = document.getElementById('overlay-img');
+      // Crossfade transition
+      img.style.transition = 'opacity 0.2s ease';
+      img.style.opacity = '0';
+      setTimeout(function() {
+        img.src = IMAGES[overlayIndex];
+        img.onload = function() {
+          img.style.opacity = '1';
+          img.onload = null;
+        };
+      }, 200);
       document.getElementById('overlay-index').textContent =
         (overlayIndex + 1) + ' / ' + IMAGES.length;
     }
@@ -1253,6 +1328,10 @@
         c.scale.set(d.currentScale, d.currentScale, d.currentScale);
         c.material.uniforms.uHover.value = d.currentHover;
         c.material.uniforms.uTime.value = time;
+        // Brighten gold border on hover
+        if (c.children[0]) {
+          c.children[0].material.opacity = 0.1 + d.currentHover * 0.4;
+        }
       }
 
       // Hover detection
@@ -1276,11 +1355,30 @@
         }
       }
 
-      // Wireframe globe pulse
+      // Wireframe globe — gold flicker shimmer
       if (wireframeGlobe) {
-        wireframeGlobe.material.opacity = 0.03 + Math.sin(time * 0.5) * 0.015;
-        wireframeGlobe.rotation.y = time * 0.02;
-        wireframeGlobe.rotation.x = Math.sin(time * 0.15) * 0.05;
+        var wc = wireframeGlobe.userData.colors;
+        var wn = wireframeGlobe.userData.vertCount;
+        // Flicker ~8% of vertices per frame toward bright gold, rest decay
+        for (var wi = 0; wi < wn; wi++) {
+          var ci = wi * 3;
+          var flicker = Math.sin(time * 3.0 + wi * 0.73) * Math.cos(time * 1.7 + wi * 1.31);
+          if (flicker > 0.85) {
+            // Bright gold spike
+            wc[ci]     = Math.min(1.0, wc[ci] + 0.08);
+            wc[ci + 1] = Math.min(0.85, wc[ci + 1] + 0.06);
+            wc[ci + 2] = Math.min(0.55, wc[ci + 2] + 0.04);
+          } else {
+            // Decay back to base gold
+            wc[ci]     += (0.722 - wc[ci]) * 0.04;
+            wc[ci + 1] += (0.588 - wc[ci + 1]) * 0.04;
+            wc[ci + 2] += (0.306 - wc[ci + 2]) * 0.04;
+          }
+        }
+        wireframeGlobe.geometry.attributes.color.needsUpdate = true;
+        wireframeGlobe.material.opacity = 0.05 + Math.sin(time * 0.4) * 0.025;
+        wireframeGlobe.rotation.y = time * 0.015;
+        wireframeGlobe.rotation.x = Math.sin(time * 0.12) * 0.04;
       }
 
       // Particles
