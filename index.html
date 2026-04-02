@@ -1016,6 +1016,167 @@
     }
 
     // ========================================
+    // 7B. WEB AUDIO — AMBIENT SOUND DESIGN
+    // ========================================
+    var audioCtx = null;
+    var droneOsc = null;
+    var droneGain = null;
+    var hoverOsc = null;
+    var hoverGain = null;
+    var audioStarted = false;
+
+    function initAudio() {
+      if (audioStarted) return;
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        // Ambient drone — low continuous hum
+        droneOsc = audioCtx.createOscillator();
+        droneOsc.type = 'sine';
+        droneOsc.frequency.value = 55; // A1 — deep sub-bass
+        droneGain = audioCtx.createGain();
+        droneGain.gain.value = 0;
+        // Second harmonic for richness
+        var drone2 = audioCtx.createOscillator();
+        drone2.type = 'sine';
+        drone2.frequency.value = 82.5; // fifth above
+        var drone2Gain = audioCtx.createGain();
+        drone2Gain.gain.value = 0;
+
+        droneOsc.connect(droneGain);
+        drone2.connect(drone2Gain);
+        droneGain.connect(audioCtx.destination);
+        drone2Gain.connect(audioCtx.destination);
+        droneOsc.start();
+        drone2.start();
+
+        // Fade in drone over 3 seconds
+        droneGain.gain.linearRampToValueAtTime(0.03, audioCtx.currentTime + 3);
+        drone2Gain.gain.linearRampToValueAtTime(0.015, audioCtx.currentTime + 3);
+
+        // Store for pitch modulation
+        window._droneOsc = droneOsc;
+        window._droneGain = droneGain;
+        window._drone2 = drone2;
+        window._drone2Gain = drone2Gain;
+
+        // Hover tone — crystalline, starts silent
+        hoverOsc = audioCtx.createOscillator();
+        hoverOsc.type = 'triangle';
+        hoverOsc.frequency.value = 880;
+        hoverGain = audioCtx.createGain();
+        hoverGain.gain.value = 0;
+        hoverOsc.connect(hoverGain);
+        hoverGain.connect(audioCtx.destination);
+        hoverOsc.start();
+
+        audioStarted = true;
+      } catch (e) {
+        // Audio not available — silent fallback
+      }
+    }
+
+    function playHoverTone(cardIndex) {
+      if (!audioCtx || !hoverGain) return;
+      // Map card index to a pentatonic note for pleasant tones
+      var pentatonic = [261.6, 293.7, 329.6, 392.0, 440.0, 523.3, 587.3, 659.3];
+      var note = pentatonic[cardIndex % pentatonic.length];
+      hoverOsc.frequency.setValueAtTime(note, audioCtx.currentTime);
+      hoverGain.gain.cancelScheduledValues(audioCtx.currentTime);
+      hoverGain.gain.setValueAtTime(0.02, audioCtx.currentTime);
+      hoverGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.6);
+    }
+
+    function playClickThud() {
+      if (!audioCtx) return;
+      try {
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = 80;
+        osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.25);
+      } catch (e) {}
+    }
+
+    function modulateDrone(rotationSpeed) {
+      if (!window._droneOsc || !audioCtx) return;
+      // Shift drone pitch slightly based on drag velocity
+      var pitchShift = Math.abs(rotationSpeed) * 200;
+      window._droneOsc.frequency.linearRampToValueAtTime(
+        55 + pitchShift, audioCtx.currentTime + 0.1
+      );
+    }
+
+    // ========================================
+    // 7C. CONSTELLATION CONNECTION LINES
+    // ========================================
+    var connectionLines = null;
+    var connectionData = [];
+    var MAX_CONNECTIONS = 300;
+    var CONNECTION_DISTANCE = 2.8;
+
+    function initConnections() {
+      var lineGeo = new THREE.BufferGeometry();
+      var linePositions = new Float32Array(MAX_CONNECTIONS * 6); // 2 points per line, 3 coords each
+      var lineAlphas = new Float32Array(MAX_CONNECTIONS * 2);
+      lineGeo.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
+      lineGeo.setDrawRange(0, 0);
+
+      var lineMat = new THREE.LineBasicMaterial({
+        color: 0xB8964E,
+        transparent: true,
+        opacity: 0.08,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+      });
+
+      connectionLines = new THREE.LineSegments(lineGeo, lineMat);
+      globeGroup.add(connectionLines);
+    }
+
+    function updateConnections() {
+      if (!connectionLines || cards.length < 2) return;
+      var positions = connectionLines.geometry.attributes.position.array;
+      var count = 0;
+      var hovIdx = hoveredCard ? hoveredCard.userData.index : -1;
+
+      for (var a = 0; a < cards.length && count < MAX_CONNECTIONS; a++) {
+        var ca = cards[a];
+        if (ca.userData.currentScale < 0.5) continue;
+        for (var b = a + 1; b < cards.length && count < MAX_CONNECTIONS; b++) {
+          var cb = cards[b];
+          if (cb.userData.currentScale < 0.5) continue;
+          var dx = ca.position.x - cb.position.x;
+          var dy = ca.position.y - cb.position.y;
+          var dz = ca.position.z - cb.position.z;
+          var dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+          if (dist < CONNECTION_DISTANCE) {
+            var idx = count * 6;
+            positions[idx]     = ca.position.x;
+            positions[idx + 1] = ca.position.y;
+            positions[idx + 2] = ca.position.z;
+            positions[idx + 3] = cb.position.x;
+            positions[idx + 4] = cb.position.y;
+            positions[idx + 5] = cb.position.z;
+            count++;
+          }
+        }
+      }
+
+      connectionLines.geometry.setDrawRange(0, count * 2);
+      connectionLines.geometry.attributes.position.needsUpdate = true;
+
+      // Brighten when hovering — connected cards glow
+      connectionLines.material.opacity = hovIdx >= 0 ? 0.15 : 0.06;
+    }
+
+    // ========================================
     // 8. LOAD IMAGES AS SHADER CARDS
     // ========================================
     function loadCards() {
@@ -1135,42 +1296,61 @@
       uiEls.forEach(function(id) {
         var el = document.getElementById(id);
         el.style.opacity = '0';
-        el.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
+        el.style.transition = 'opacity 1s ease';
       });
 
+      // PHASE 1: Loader fades, grid + streetlights visible in darkness (3s)
+      // Cards stay at scale 0 — only the wireframe and flickering lights
       setTimeout(function() {
         document.getElementById('loader').classList.add('hidden');
 
-        // Dolly camera in
-        targetZoom = 14;
+        // Start camera dolly slowly — show just the grid in void
+        targetZoom = 16;
 
-        // Set card reveal targets with staggered delays
-        var revealStart = performance.now() + 300;
-        cards.forEach(function(card, i) {
-          card.userData.targetScale = 1;
-          card.userData.revealDelay = revealStart + i * 25;
-        });
+        // Start audio on first interaction requirement — but init context
+        // (actual start deferred to first click/touch)
 
-        // Fade in UI via CSS transitions
+        // Title fades in over the dark grid
         setTimeout(function() {
           document.getElementById('title-bar').style.opacity = '1';
-        }, 800);
+        }, 500);
+
+      }, 400);
+
+      // PHASE 2: Cards materialize from center outward (after 3s of grid-only)
+      setTimeout(function() {
+        targetZoom = 14;
+
+        // Sort cards by distance from globe center for inside-out reveal
+        var sorted = cards.slice().sort(function(a, b) {
+          // Cards near the "poles" (top/bottom) appear first,
+          // equator last — like thoughts forming from a seed
+          return Math.abs(a.userData.globePos.y) - Math.abs(b.userData.globePos.y);
+        });
+
+        var revealStart = performance.now();
+        sorted.forEach(function(card, i) {
+          card.userData.targetScale = 1;
+          card.userData.revealDelay = revealStart + i * 40;
+        });
+
+        // Rest of UI appears as cards fill in
         setTimeout(function() {
           document.getElementById('image-count').style.opacity = '1';
-        }, 900);
+        }, 800);
         setTimeout(function() {
           document.getElementById('view-toggle').style.opacity = '1';
-        }, 1000);
+        }, 1500);
         setTimeout(function() {
           document.getElementById('zoom-hint').style.opacity = '1';
-        }, 1400);
+        }, 2200);
 
         introPlayed = true;
 
         setTimeout(function() {
           document.getElementById('zoom-hint').classList.add('faded');
-        }, 6000);
-      }, 400);
+        }, 8000);
+      }, 3500);
     }
 
     // ========================================
@@ -1210,6 +1390,7 @@
     // 11. INTERACTION
     // ========================================
     function onPointerDown(e) {
+      initAudio();
       isDragging = true;
       prevMX = e.clientX;
       prevMY = e.clientY;
@@ -1250,10 +1431,13 @@
     }
 
     function onClick(e) {
+      // Init audio on first user gesture (browser requirement)
+      initAudio();
       if (!introPlayed || isTransitioning) return;
       _raycaster.setFromCamera(_mouse, camera);
       var hits = _raycaster.intersectObjects(cards);
       if (hits.length > 0) {
+        playClickThud();
         showOverlay(hits[0].object.userData);
       }
     }
@@ -1416,6 +1600,7 @@
           hoveredCard.userData.targetScale = 1.12;
           hoveredCard.userData.targetHover = 1;
           cursorRing.classList.add('hovering');
+          playHoverTone(target.userData.index);
         }
       }
 
@@ -1447,6 +1632,12 @@
         var slSizes = sl.geometry.attributes.position.array;
         sl.material.size = 0.07 + Math.sin(time * 0.6) * 0.01;
       }
+
+      // Constellation connection lines
+      updateConnections();
+
+      // Drone pitch modulation from rotation velocity
+      modulateDrone(velY);
 
       // Particles
       updateParticles(time);
@@ -1510,6 +1701,7 @@
     // ========================================
     function init() {
       initScene();
+      initConnections();
       loadCards();
       initViewToggle();
 
