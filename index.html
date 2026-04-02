@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Interactive 3D globe gallery — images distributed across a sphere with orbit controls, liquid distortion shaders, and layout morphing.">
+  <meta name="description" content="Latent Space — an interactive 3D collection of images distributed across a sphere. Drag to orbit, scroll to zoom, click to explore.">
   <meta name="theme-color" content="#09090B">
-  <meta property="og:title" content="Globe Gallery">
-  <meta property="og:description" content="Interactive 3D image sphere with liquid distortion and layout morphing.">
+  <meta property="og:title" content="Latent Space">
+  <meta property="og:description" content="An interactive 3D collection. Drag to orbit, scroll to zoom, click to explore.">
   <meta property="og:type" content="website">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:;">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -347,6 +347,33 @@
       transition: color 0.3s ease;
     }
     .overlay-close:hover { color: var(--gallery-white); }
+    .overlay-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: 1px solid rgba(255,255,255,0.08);
+      color: var(--pewter);
+      font-size: 1.2rem;
+      width: 3rem;
+      height: 3rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: none;
+      font-family: var(--font-body);
+      transition: color 0.3s ease, border-color 0.3s ease;
+    }
+    .overlay-nav:hover {
+      color: var(--gallery-white);
+      border-color: var(--gold);
+    }
+    .overlay-nav:focus-visible {
+      outline: 1px solid var(--gold);
+      outline-offset: 2px;
+    }
+    .overlay-prev { left: 2.5rem; }
+    .overlay-next { right: 2.5rem; }
 
     /* ========================================
        RESPONSIVE
@@ -360,6 +387,9 @@
       .zoom-hint { display: none; }
       .view-toggle button { cursor: pointer; }
       .overlay-close { cursor: pointer; }
+      .overlay-nav { cursor: pointer; }
+      .overlay-prev { left: 1rem; }
+      .overlay-next { right: 1rem; }
     }
 
     /* ========================================
@@ -381,8 +411,8 @@
 
   <!-- LOADER -->
   <div id="loader">
-    <div class="loader-overline">Collection</div>
-    <div class="loader-title">Globe Gallery</div>
+    <div class="loader-overline">A collection of visions</div>
+    <div class="loader-title">Latent Space</div>
     <div class="loader-bar">
       <div class="loader-fill" id="loader-fill"></div>
     </div>
@@ -395,8 +425,8 @@
   <!-- UI OVERLAY -->
   <div id="ui-overlay">
     <div class="title-bar" id="title-bar">
-      <div class="overline">Interactive Collection</div>
-      <h1>Globe Gallery</h1>
+      <div class="overline">A collection of visions</div>
+      <h1>Latent Space</h1>
     </div>
     <div class="image-count" id="image-count">
       <div class="number" id="count-number">0</div>
@@ -413,7 +443,9 @@
   <!-- CARD OVERLAY -->
   <div id="card-overlay">
     <button class="overlay-close" id="overlay-close">Close [Esc]</button>
+    <button class="overlay-nav overlay-prev" id="overlay-prev" aria-label="Previous image">&larr;</button>
     <img id="overlay-img" src="" alt="">
+    <button class="overlay-nav overlay-next" id="overlay-next" aria-label="Next image">&rarr;</button>
     <div class="overlay-meta">
       <span id="overlay-index"></span>
     </div>
@@ -441,7 +473,22 @@
       'images/28.webp','images/30.webp','images/31.webp','images/32.webp',
       'images/33.webp','images/34.webp','images/35.webp','images/36.webp',
       'images/37.webp','images/38.webp','images/39.webp','images/40.webp',
-      'images/41.webp','images/42.webp'
+      'images/41.webp','images/42.webp',
+      'images/Brian_Lapinski_Biomorphic_Theater__organic_futurism_wrapped_around_precision_cu_14e316fe-0218-4fa8-a950-3013d40fe927.png',
+      'images/Brian_Lapinski_Biomorphic_Theater__organic_futurism_wrapped_around_precision_cu_2e2d9e8a-627d-4998-973b-389a37c8db2d.png',
+      'images/Brian_Lapinski_Biomorphic_Theater__organic_futurism_wrapped_around_precision_cu_3ea25e7a-c4da-4f22-82e4-037cf9f66bf4.png',
+      'images/Brian_Lapinski_commercial_food_photography_single_key_light_from_upper-right_wi_73bcd867-4967-4560-9126-9447c450a338.png',
+      'images/Brian_Lapinski_contemporary_Japanese_fine_dining_dish_photographed_as_dark-fiel_0df08629-051f-4024-bcfe-4e6397f7c522.png',
+      'images/Brian_Lapinski_contemporary_Japanese_fine_dining_dish_photographed_as_dark-fiel_0ef64685-a1ba-442f-90be-da4fff7889a6.png',
+      'images/Brian_Lapinski_contemporary_Japanese_fine_dining_dish_photographed_as_dark-fiel_b816bf52-8798-4822-950a-9fc67fd3ce28.png',
+      'images/Brian_Lapinski_contemporary_Japanese_fine_dining_dish_photographed_as_dark-fiel_db908254-c5b9-434a-bf1b-93a855e8b3f7.png',
+      'images/Brian_Lapinski_digital_collage_moodboard_dense_rectangular_grid_layout_with_ov_66c774fc-951d-45e4-b1c9-e7e5abe47bfd.png',
+      'images/Brian_Lapinski_professional_studio_automotive_photography_high-gloss_rosso_cor_f352a294-6b62-4a04-918d-8dabb5c2b7ad.png',
+      'images/Brian_Lapinski_warm_golden-hour_naturalistic_light_soft_diffused_environmental_c37d9ae9-06f1-4282-b7f0-31a192392cc7.png',
+      'images/head with Flowers.png',
+      'images/u7768149725_dark_void_electric_violet_radial_gradients_emissi_cccb0fce-822d-47f4-bd2d-6c6da35d2701_1.png',
+      'images/u7768149725_dark_void_electric_violet_radial_gradients_emissi_cccb0fce-822d-47f4-bd2d-6c6da35d2701_3.png',
+      'images/u7768149725_two_intertwined_double_helix_structures_spiraling_b98931e1-ec6d-4c04-9f96-de48371271d4_0.png'
     ];
 
     var GLOBE_RADIUS = 5.5;
@@ -470,8 +517,15 @@
     var _mouse = new THREE.Vector2(-999, -999);
     var _vec3 = new THREE.Vector3();
 
+    // Mouse parallax
+    var parallaxX = 0, parallaxY = 0;
+    var targetParallaxX = 0, targetParallaxY = 0;
+
+    // Overlay navigation
+    var overlayIndex = -1;
+
     // Three.js
-    var renderer, scene, camera, globeGroup, particleSystem;
+    var renderer, scene, camera, globeGroup, particleSystem, wireframeGlobe;
     var cards = [];
     var clock;
 
@@ -614,6 +668,18 @@
       globeGroup = new THREE.Group();
       scene.add(globeGroup);
 
+      // Wireframe globe skeleton
+      var wireGeo = new THREE.IcosahedronGeometry(GLOBE_RADIUS * 0.98, 2);
+      var wireMat = new THREE.MeshBasicMaterial({
+        color: 0xB8964E,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.04,
+        depthWrite: false
+      });
+      wireframeGlobe = new THREE.Mesh(wireGeo, wireMat);
+      globeGroup.add(wireframeGlobe);
+
       initParticles();
     }
 
@@ -695,6 +761,19 @@
           });
 
           var mesh = new THREE.Mesh(geo, mat);
+
+          // Thin gold border — slightly larger plane behind the card
+          var borderGeo = new THREE.PlaneGeometry(w + 0.03, h + 0.03);
+          var borderMat = new THREE.MeshBasicMaterial({
+            color: 0xB8964E,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.15,
+            depthWrite: false
+          });
+          var border = new THREE.Mesh(borderGeo, borderMat);
+          border.position.z = -0.005;
+          mesh.add(border);
 
           // Globe position via Fibonacci
           var gp = fibSphere(i, total, GLOBE_RADIUS);
@@ -840,6 +919,10 @@
       _mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
       _mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
 
+      // Mouse parallax targets
+      targetParallaxX = _mouse.x * 0.3;
+      targetParallaxY = _mouse.y * 0.15;
+
       if (isDragging && currentView === 'globe') {
         velY = (e.clientX - prevMX) * 0.004;
         velX = (e.clientY - prevMY) * 0.004;
@@ -876,15 +959,25 @@
     // 12. OVERLAY
     // ========================================
     function showOverlay(data) {
+      overlayIndex = data.index;
       var overlay = document.getElementById('card-overlay');
       document.getElementById('overlay-img').src = data.src;
       document.getElementById('overlay-index').textContent =
-        (data.index + 1) + ' / ' + IMAGES.length;
+        (overlayIndex + 1) + ' / ' + IMAGES.length;
       overlay.classList.add('visible');
     }
 
     function hideOverlay() {
       document.getElementById('card-overlay').classList.remove('visible');
+      overlayIndex = -1;
+    }
+
+    function navigateOverlay(dir) {
+      if (overlayIndex < 0) return;
+      overlayIndex = (overlayIndex + dir + IMAGES.length) % IMAGES.length;
+      document.getElementById('overlay-img').src = IMAGES[overlayIndex];
+      document.getElementById('overlay-index').textContent =
+        (overlayIndex + 1) + ' / ' + IMAGES.length;
     }
 
     // ========================================
@@ -912,6 +1005,12 @@
       // Smooth zoom
       currentZoom += (targetZoom - currentZoom) * 0.07;
       camera.position.z = currentZoom;
+
+      // Mouse parallax — subtle scene tilt
+      parallaxX += (targetParallaxX - parallaxX) * 0.03;
+      parallaxY += (targetParallaxY - parallaxY) * 0.03;
+      camera.position.x = parallaxX;
+      camera.position.y = parallaxY;
 
       if (currentView === 'globe') {
         // Auto-rotate
@@ -1037,6 +1136,8 @@
     // ========================================
     function onKeyDown(e) {
       if (e.key === 'Escape') hideOverlay();
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') navigateOverlay(1);
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') navigateOverlay(-1);
       if (e.key === 'f' || e.key === 'F') {
         showFPS = !showFPS;
         document.getElementById('fps-counter').classList.toggle('visible', showFPS);
@@ -1072,7 +1173,17 @@
         e.stopPropagation();
         hideOverlay();
       });
-      document.getElementById('card-overlay').addEventListener('click', hideOverlay);
+      document.getElementById('card-overlay').addEventListener('click', function(e) {
+        if (e.target === this || e.target === document.getElementById('overlay-img')) hideOverlay();
+      });
+      document.getElementById('overlay-prev').addEventListener('click', function(e) {
+        e.stopPropagation();
+        navigateOverlay(-1);
+      });
+      document.getElementById('overlay-next').addEventListener('click', function(e) {
+        e.stopPropagation();
+        navigateOverlay(1);
+      });
       window.addEventListener('resize', onResize);
       window.addEventListener('keydown', onKeyDown);
 
