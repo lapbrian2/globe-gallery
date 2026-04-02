@@ -836,28 +836,92 @@
       globeGroup = new THREE.Group();
       scene.add(globeGroup);
 
-      // Wireframe globe skeleton with vertex color shimmer
+      // Wireframe globe skeleton — dim base grid
       var wireGeo = new THREE.IcosahedronGeometry(GLOBE_RADIUS * 0.98, 3);
-      var wireVertCount = wireGeo.attributes.position.count;
-      var wireColors = new Float32Array(wireVertCount * 3);
-      for (var wv = 0; wv < wireVertCount; wv++) {
-        // Base gold with per-vertex variation for shimmer
-        wireColors[wv * 3]     = 0.722 + (Math.random() - 0.5) * 0.15;
-        wireColors[wv * 3 + 1] = 0.588 + (Math.random() - 0.5) * 0.12;
-        wireColors[wv * 3 + 2] = 0.306 + (Math.random() - 0.5) * 0.08;
-      }
-      wireGeo.setAttribute('color', new THREE.BufferAttribute(wireColors, 3));
       var wireMat = new THREE.MeshBasicMaterial({
-        vertexColors: true,
+        color: 0xB8964E,
         wireframe: true,
         transparent: true,
-        opacity: 0.06,
+        opacity: 0.03,
         depthWrite: false
       });
       wireframeGlobe = new THREE.Mesh(wireGeo, wireMat);
-      wireframeGlobe.userData.colors = wireColors;
-      wireframeGlobe.userData.vertCount = wireVertCount;
       globeGroup.add(wireframeGlobe);
+
+      // Streetlight points — bright dots at grid vertices that twinkle
+      var lightGeo = new THREE.BufferGeometry();
+      var wirePositions = wireGeo.attributes.position.array;
+      var lightCount = wireGeo.attributes.position.count;
+      // Deduplicate vertices (icosahedron has many shared positions)
+      var uniqueMap = {};
+      var uniquePositions = [];
+      for (var lv = 0; lv < lightCount; lv++) {
+        var key = Math.round(wirePositions[lv*3]*100) + ',' +
+                  Math.round(wirePositions[lv*3+1]*100) + ',' +
+                  Math.round(wirePositions[lv*3+2]*100);
+        if (!uniqueMap[key]) {
+          uniqueMap[key] = true;
+          uniquePositions.push(
+            wirePositions[lv*3],
+            wirePositions[lv*3+1],
+            wirePositions[lv*3+2]
+          );
+        }
+      }
+      var lightPosArray = new Float32Array(uniquePositions);
+      var lightAlphas = new Float32Array(uniquePositions.length / 3);
+      var lightPhases = new Float32Array(uniquePositions.length / 3);
+      var lightSpeeds = new Float32Array(uniquePositions.length / 3);
+      for (var la = 0; la < lightAlphas.length; la++) {
+        lightAlphas[la] = Math.random() * 0.3;
+        lightPhases[la] = Math.random() * Math.PI * 2;
+        lightSpeeds[la] = 0.5 + Math.random() * 3.0;
+      }
+      lightGeo.setAttribute('position', new THREE.BufferAttribute(lightPosArray, 3));
+      lightGeo.setAttribute('alpha', new THREE.BufferAttribute(lightAlphas, 1));
+
+      var lightMat = new THREE.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        uniforms: {
+          uSize: { value: 4.0 },
+          uPixelRatio: { value: Math.min(window.devicePixelRatio, 2) }
+        },
+        vertexShader: [
+          'attribute float alpha;',
+          'varying float vAlpha;',
+          'uniform float uSize;',
+          'uniform float uPixelRatio;',
+          'void main() {',
+          '  vAlpha = alpha;',
+          '  vec4 mvPos = modelViewMatrix * vec4(position, 1.0);',
+          '  gl_PointSize = uSize * uPixelRatio * (1.0 / -mvPos.z);',
+          '  gl_Position = projectionMatrix * mvPos;',
+          '}'
+        ].join('\n'),
+        fragmentShader: [
+          'varying float vAlpha;',
+          'void main() {',
+          '  // Soft circle falloff',
+          '  float d = length(gl_PointCoord - 0.5) * 2.0;',
+          '  float glow = 1.0 - smoothstep(0.0, 1.0, d);',
+          '  glow *= glow;',
+          '  // Gold color with per-point alpha',
+          '  vec3 gold = vec3(0.722, 0.588, 0.306);',
+          '  vec3 bright = vec3(1.0, 0.92, 0.7);',
+          '  vec3 col = mix(gold, bright, vAlpha);',
+          '  gl_FragColor = vec4(col, glow * vAlpha);',
+          '}'
+        ].join('\n')
+      });
+      var streetLights = new THREE.Points(lightGeo, lightMat);
+      streetLights.userData.alphas = lightAlphas;
+      streetLights.userData.phases = lightPhases;
+      streetLights.userData.speeds = lightSpeeds;
+      streetLights.userData.count = lightAlphas.length;
+      globeGroup.add(streetLights);
+      window._streetLights = streetLights;
 
       initParticles();
     }
@@ -1265,10 +1329,10 @@
         // Auto-rotate
         globeGroup.rotation.y += autoSpeed;
 
-        // Drag momentum
+        // Drag — apply rotation always, dampen when released
+        globeGroup.rotation.y += velY;
+        globeGroup.rotation.x += velX;
         if (!isDragging) {
-          globeGroup.rotation.y += velY;
-          globeGroup.rotation.x += velX;
           velY *= DAMPING;
           velX *= DAMPING;
         }
@@ -1355,30 +1419,33 @@
         }
       }
 
-      // Wireframe globe — gold flicker shimmer
+      // Wireframe globe — subtle base grid
       if (wireframeGlobe) {
-        var wc = wireframeGlobe.userData.colors;
-        var wn = wireframeGlobe.userData.vertCount;
-        // Flicker ~8% of vertices per frame toward bright gold, rest decay
-        for (var wi = 0; wi < wn; wi++) {
-          var ci = wi * 3;
-          var flicker = Math.sin(time * 3.0 + wi * 0.73) * Math.cos(time * 1.7 + wi * 1.31);
-          if (flicker > 0.85) {
-            // Bright gold spike
-            wc[ci]     = Math.min(1.0, wc[ci] + 0.08);
-            wc[ci + 1] = Math.min(0.85, wc[ci + 1] + 0.06);
-            wc[ci + 2] = Math.min(0.55, wc[ci + 2] + 0.04);
-          } else {
-            // Decay back to base gold
-            wc[ci]     += (0.722 - wc[ci]) * 0.04;
-            wc[ci + 1] += (0.588 - wc[ci + 1]) * 0.04;
-            wc[ci + 2] += (0.306 - wc[ci + 2]) * 0.04;
-          }
+        wireframeGlobe.material.opacity = 0.025 + Math.sin(time * 0.3) * 0.01;
+        wireframeGlobe.rotation.y = time * 0.012;
+        wireframeGlobe.rotation.x = Math.sin(time * 0.1) * 0.03;
+      }
+
+      // Streetlights — twinkle like city lights from space
+      var sl = window._streetLights;
+      if (sl) {
+        var slAlphas = sl.userData.alphas;
+        var slPhases = sl.userData.phases;
+        var slSpeeds = sl.userData.speeds;
+        var slCount = sl.userData.count;
+        for (var si = 0; si < slCount; si++) {
+          // Each light has its own rhythm — some fast blink, some slow glow
+          var pulse = Math.sin(time * slSpeeds[si] + slPhases[si]);
+          var sharp = pulse * pulse * pulse; // cubic falloff — bright peak, long dim
+          // Random bright spikes — ~5% chance per frame of flaring
+          var spike = Math.sin(time * 7.3 + si * 2.17) * Math.cos(time * 4.1 + si * 1.53);
+          var flare = spike > 0.92 ? 1.0 : 0.0;
+          slAlphas[si] = Math.max(0.02, sharp * 0.5 + flare * 0.8);
         }
-        wireframeGlobe.geometry.attributes.color.needsUpdate = true;
-        wireframeGlobe.material.opacity = 0.05 + Math.sin(time * 0.4) * 0.025;
-        wireframeGlobe.rotation.y = time * 0.015;
-        wireframeGlobe.rotation.x = Math.sin(time * 0.12) * 0.04;
+        sl.geometry.attributes.alpha.needsUpdate = true;
+        // Use the alpha attribute via size — brighter lights appear bigger
+        var slSizes = sl.geometry.attributes.position.array;
+        sl.material.size = 0.07 + Math.sin(time * 0.6) * 0.01;
       }
 
       // Particles
