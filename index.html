@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Interactive 3D globe gallery — images distributed across a sphere with orbit controls, liquid distortion, and layout morphing.">
+  <meta name="theme-color" content="#09090B">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:;">
+  <title>Globe Gallery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=Cormorant+Garamond:wght@300;400&display=swap" rel="stylesheet">
+  <style>
+    /* ========================================
+       RESET & BASE
+    ======================================== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+
+    :root {
+      --ink: #09090B;
+      --graphite: #18181B;
+      --carbon: #1C1C1E;
+      --pewter: #71717A;
+      --linen: #F5F5F0;
+      --gallery-white: #FAFAF9;
+      --gold: #B8964E;
+      --font-display: 'Cormorant Garamond', Georgia, serif;
+      --font-body: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--ink);
+      color: var(--gallery-white);
+      font-family: var(--font-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ========================================
+       LOADING SCREEN
+    ======================================== */
+    #loader {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: var(--ink);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.6s ease, visibility 0.6s ease;
+    }
+    #loader.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    #loader .loader-text {
+      font-family: var(--font-display);
+      font-weight: 300;
+      font-size: 1.25rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--pewter);
+      margin-bottom: 2rem;
+    }
+    #loader .progress-bar {
+      width: 200px;
+      height: 1px;
+      background: rgba(255,255,255,0.1);
+      position: relative;
+      overflow: hidden;
+    }
+    #loader .progress-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      width: 0%;
+      background: var(--gold);
+      transition: width 0.3s ease;
+    }
+
+    /* ========================================
+       CANVAS
+    ======================================== */
+    #canvas-wrap {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+    }
+    #canvas-wrap canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ========================================
+       UI OVERLAY
+    ======================================== */
+    #ui-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+    }
+    #ui-overlay * {
+      pointer-events: auto;
+    }
+
+    .view-toggle {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+      display: flex;
+      gap: 0;
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+    .view-toggle button {
+      background: transparent;
+      color: var(--pewter);
+      border: none;
+      padding: 0.5rem 1.25rem;
+      font-family: var(--font-body);
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: color 0.3s ease, background 0.3s ease;
+    }
+    .view-toggle button.active {
+      color: var(--gallery-white);
+      background: rgba(255,255,255,0.06);
+    }
+    .view-toggle button:hover {
+      color: var(--gallery-white);
+    }
+
+    .title-bar {
+      position: fixed;
+      top: 2rem;
+      left: 2rem;
+      z-index: 20;
+    }
+    .title-bar h1 {
+      font-family: var(--font-display);
+      font-weight: 300;
+      font-size: 1.1rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gallery-white);
+    }
+    .title-bar p {
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--pewter);
+      margin-top: 0.25rem;
+    }
+
+    .image-count {
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      z-index: 20;
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--pewter);
+    }
+
+    /* ========================================
+       EXPANDED CARD OVERLAY
+    ======================================== */
+    #card-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(9,9,11,0.92);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.4s ease, visibility 0.4s ease;
+      cursor: pointer;
+    }
+    #card-overlay.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+    #card-overlay img {
+      max-width: 80vw;
+      max-height: 80vh;
+      object-fit: contain;
+    }
+    #card-overlay .card-meta {
+      position: absolute;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+    }
+    #card-overlay .card-meta span {
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--pewter);
+    }
+
+    /* ========================================
+       RESPONSIVE
+    ======================================== */
+    @media (max-width: 768px) {
+      .title-bar { top: 1rem; left: 1rem; }
+      .image-count { top: 1rem; right: 1rem; }
+      .view-toggle { bottom: 1rem; }
+    }
+
+    /* ========================================
+       REDUCED MOTION
+    ======================================== */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LOADER -->
+  <div id="loader">
+    <div class="loader-text">Loading</div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+  </div>
+
+  <!-- THREE.JS CANVAS -->
+  <div id="canvas-wrap"></div>
+
+  <!-- UI OVERLAY -->
+  <div id="ui-overlay">
+    <div class="title-bar">
+      <h1>Globe Gallery</h1>
+      <p>Interactive collection</p>
+    </div>
+    <div class="image-count" id="image-count"></div>
+    <div class="view-toggle">
+      <button class="active" data-view="globe">Globe</button>
+      <button data-view="grid">Grid</button>
+    </div>
+  </div>
+
+  <!-- EXPANDED CARD OVERLAY -->
+  <div id="card-overlay">
+    <img id="card-overlay-img" src="" alt="">
+    <div class="card-meta">
+      <span id="card-overlay-meta"></span>
+    </div>
+  </div>
+
+  <!-- CDN DEPENDENCIES -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+
+  <script>
+  (function() {
+    'use strict';
+
+    // ========================================
+    // CONSTANTS
+    // ========================================
+    const IMAGES = [
+      'images/1.webp','images/2.webp','images/3.webp','images/10.webp',
+      'images/11.webp','images/12.webp','images/13.webp','images/15 (1).webp',
+      'images/15 (2).webp','images/16.webp','images/17.webp','images/18.webp',
+      'images/19.webp','images/20.webp','images/21.webp','images/22.webp',
+      'images/23.webp','images/24.webp','images/25.webp','images/26.webp',
+      'images/27.webp','images/28.webp','images/30.webp','images/31.webp',
+      'images/32.webp','images/33.webp','images/34.webp','images/35.webp',
+      'images/36.webp','images/37.webp'
+    ];
+
+    const GLOBE_RADIUS = 5;
+    const CARD_WIDTH = 1.2;
+    const CARD_HEIGHT = 1.2;
+    const ROTATION_SPEED = 0.001;
+    const DAMPING = 0.95;
+
+    let currentView = 'globe'; // 'globe' | 'grid'
+    let isTransitioning = false;
+    let isDragging = false;
+    let previousMouseX = 0;
+    let previousMouseY = 0;
+    let rotationVelocityX = 0;
+    let rotationVelocityY = 0;
+    let autoRotateSpeed = ROTATION_SPEED;
+    let hoveredCard = null;
+    let loadedCount = 0;
+
+    // Three.js globals
+    let renderer, scene, camera, raycaster, mouse;
+    let globeGroup, cards = [];
+    let clock;
+
+    // ========================================
+    // FIBONACCI SPHERE DISTRIBUTION
+    // ========================================
+    function fibonacciSphere(index, total, radius) {
+      const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+      const y = 1 - (index / (total - 1)) * 2;
+      const radiusAtY = Math.sqrt(1 - y * y);
+      const theta = goldenAngle * index;
+      return new THREE.Vector3(
+        Math.cos(theta) * radiusAtY * radius,
+        y * radius,
+        Math.sin(theta) * radiusAtY * radius
+      );
+    }
+
+    // ========================================
+    // GRID POSITIONS
+    // ========================================
+    function gridPosition(index, total) {
+      const cols = Math.ceil(Math.sqrt(total));
+      const spacing = CARD_WIDTH * 1.3;
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      const offsetX = -(cols - 1) * spacing * 0.5;
+      const offsetY = -(Math.ceil(total / cols) - 1) * spacing * 0.5;
+      return new THREE.Vector3(
+        offsetX + col * spacing,
+        -(offsetY + row * spacing),
+        0
+      );
+    }
+
+    // ========================================
+    // INIT THREE.JS
+    // ========================================
+    function initScene() {
+      clock = new THREE.Clock();
+      renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: false,
+        powerPreference: 'high-performance'
+      });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setClearColor(0x09090B, 1);
+      renderer.outputEncoding = THREE.sRGBEncoding;
+      document.getElementById('canvas-wrap').appendChild(renderer.domElement);
+
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(
+        50,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        100
+      );
+      camera.position.set(0, 0, 12);
+
+      raycaster = new THREE.Raycaster();
+      mouse = new THREE.Vector2();
+
+      // Ambient light
+      scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+
+      // Directional key light
+      const keyLight = new THREE.DirectionalLight(0xfff5e6, 0.4);
+      keyLight.position.set(5, 5, 5);
+      scene.add(keyLight);
+
+      globeGroup = new THREE.Group();
+      scene.add(globeGroup);
+    }
+
+    // ========================================
+    // LOAD IMAGES AS TEXTURED CARDS
+    // ========================================
+    function loadCards() {
+      const textureLoader = new THREE.TextureLoader();
+      const total = IMAGES.length;
+
+      document.getElementById('image-count').textContent = total + ' works';
+
+      IMAGES.forEach(function(src, i) {
+        textureLoader.load(src, function(texture) {
+          texture.encoding = THREE.sRGBEncoding;
+          texture.minFilter = THREE.LinearFilter;
+          texture.magFilter = THREE.LinearFilter;
+
+          // Determine aspect ratio
+          var aspect = texture.image.width / texture.image.height;
+          var w = CARD_WIDTH;
+          var h = CARD_HEIGHT;
+          if (aspect > 1) {
+            h = w / aspect;
+          } else {
+            w = h * aspect;
+          }
+
+          var geometry = new THREE.PlaneGeometry(w, h);
+          var material = new THREE.MeshBasicMaterial({
+            map: texture,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 1
+          });
+
+          var mesh = new THREE.Mesh(geometry, material);
+
+          // Globe position
+          var globePos = fibonacciSphere(i, total, GLOBE_RADIUS);
+          mesh.position.copy(globePos);
+          mesh.lookAt(0, 0, 0);
+          mesh.rotateY(Math.PI); // face outward
+
+          // Store data
+          mesh.userData = {
+            index: i,
+            src: src,
+            globePos: globePos.clone(),
+            globeQuat: mesh.quaternion.clone(),
+            gridPos: gridPosition(i, total),
+            gridQuat: new THREE.Quaternion(),
+            baseScale: 1
+          };
+
+          cards.push(mesh);
+          globeGroup.add(mesh);
+
+          // Loading progress
+          loadedCount++;
+          var pct = Math.round((loadedCount / total) * 100);
+          document.getElementById('progress-fill').style.width = pct + '%';
+
+          if (loadedCount === total) {
+            onAllLoaded();
+          }
+        });
+      });
+    }
+
+    // ========================================
+    // ON ALL IMAGES LOADED
+    // ========================================
+    function onAllLoaded() {
+      setTimeout(function() {
+        document.getElementById('loader').classList.add('hidden');
+      }, 400);
+    }
+
+    // ========================================
+    // VIEW MORPHING
+    // ========================================
+    function morphToGlobe() {
+      if (isTransitioning) return;
+      isTransitioning = true;
+      currentView = 'globe';
+      autoRotateSpeed = ROTATION_SPEED;
+
+      // Reset globe group rotation smoothly
+      gsap.to(globeGroup.rotation, {
+        x: 0, y: 0, z: 0,
+        duration: 0.6,
+        ease: 'power2.inOut'
+      });
+
+      cards.forEach(function(card) {
+        var d = card.userData;
+        gsap.to(card.position, {
+          x: d.globePos.x,
+          y: d.globePos.y,
+          z: d.globePos.z,
+          duration: 1.2,
+          ease: 'power3.inOut',
+          delay: Math.random() * 0.2
+        });
+        // Slerp quaternion via proxy
+        var proxy = { t: 0 };
+        var startQuat = card.quaternion.clone();
+        gsap.to(proxy, {
+          t: 1,
+          duration: 1.2,
+          ease: 'power3.inOut',
+          delay: Math.random() * 0.2,
+          onUpdate: function() {
+            card.quaternion.slerpQuaternions(startQuat, d.globeQuat, proxy.t);
+          }
+        });
+      });
+
+      setTimeout(function() { isTransitioning = false; }, 1500);
+    }
+
+    function morphToGrid() {
+      if (isTransitioning) return;
+      isTransitioning = true;
+      currentView = 'grid';
+      autoRotateSpeed = 0;
+
+      // Reset globe group rotation
+      gsap.to(globeGroup.rotation, {
+        x: 0, y: 0, z: 0,
+        duration: 0.8,
+        ease: 'power2.inOut'
+      });
+
+      cards.forEach(function(card) {
+        var d = card.userData;
+        gsap.to(card.position, {
+          x: d.gridPos.x,
+          y: d.gridPos.y,
+          z: d.gridPos.z,
+          duration: 1.2,
+          ease: 'power3.inOut',
+          delay: Math.random() * 0.2
+        });
+        // Face camera
+        var proxy = { t: 0 };
+        var startQuat = card.quaternion.clone();
+        gsap.to(proxy, {
+          t: 1,
+          duration: 1.2,
+          ease: 'power3.inOut',
+          delay: Math.random() * 0.2,
+          onUpdate: function() {
+            card.quaternion.slerpQuaternions(startQuat, d.gridQuat, proxy.t);
+          }
+        });
+      });
+
+      setTimeout(function() { isTransitioning = false; }, 1500);
+    }
+
+    // ========================================
+    // INTERACTION — DRAG TO ROTATE
+    // ========================================
+    function onPointerDown(e) {
+      isDragging = true;
+      previousMouseX = e.clientX;
+      previousMouseY = e.clientY;
+      autoRotateSpeed = 0;
+    }
+
+    function onPointerMove(e) {
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+      if (isDragging && currentView === 'globe') {
+        var dx = e.clientX - previousMouseX;
+        var dy = e.clientY - previousMouseY;
+        rotationVelocityY = dx * 0.003;
+        rotationVelocityX = dy * 0.003;
+        previousMouseX = e.clientX;
+        previousMouseY = e.clientY;
+      }
+    }
+
+    function onPointerUp() {
+      isDragging = false;
+      if (currentView === 'globe') {
+        // Restore auto-rotate after momentum dies
+        setTimeout(function() {
+          if (!isDragging) autoRotateSpeed = ROTATION_SPEED;
+        }, 3000);
+      }
+    }
+
+    function onClick(e) {
+      raycaster.setFromCamera(mouse, camera);
+      var intersects = raycaster.intersectObjects(cards);
+      if (intersects.length > 0 && !isTransitioning) {
+        var card = intersects[0].object;
+        showOverlay(card.userData.src, card.userData.index);
+      }
+    }
+
+    // ========================================
+    // CARD OVERLAY
+    // ========================================
+    function showOverlay(src, index) {
+      var overlay = document.getElementById('card-overlay');
+      var img = document.getElementById('card-overlay-img');
+      var meta = document.getElementById('card-overlay-meta');
+      img.src = src;
+      meta.textContent = (index + 1) + ' / ' + IMAGES.length;
+      overlay.classList.add('visible');
+    }
+
+    function hideOverlay() {
+      document.getElementById('card-overlay').classList.remove('visible');
+    }
+
+    // ========================================
+    // RENDER LOOP
+    // ========================================
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (currentView === 'globe') {
+        // Auto-rotate
+        globeGroup.rotation.y += autoRotateSpeed;
+
+        // Momentum from drag
+        if (!isDragging) {
+          globeGroup.rotation.y += rotationVelocityY;
+          globeGroup.rotation.x += rotationVelocityX;
+          rotationVelocityY *= DAMPING;
+          rotationVelocityX *= DAMPING;
+        }
+      }
+
+      // Hover detection
+      raycaster.setFromCamera(mouse, camera);
+      var intersects = raycaster.intersectObjects(cards);
+
+      if (hoveredCard && (!intersects.length || intersects[0].object !== hoveredCard)) {
+        gsap.to(hoveredCard.scale, { x: 1, y: 1, z: 1, duration: 0.3, ease: 'power2.out' });
+        document.body.style.cursor = 'default';
+        hoveredCard = null;
+      }
+
+      if (intersects.length > 0 && !isTransitioning) {
+        var target = intersects[0].object;
+        if (target !== hoveredCard) {
+          hoveredCard = target;
+          gsap.to(hoveredCard.scale, { x: 1.15, y: 1.15, z: 1.15, duration: 0.3, ease: 'power2.out' });
+          document.body.style.cursor = 'pointer';
+        }
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    // ========================================
+    // RESIZE
+    // ========================================
+    function onResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // ========================================
+    // VIEW TOGGLE BUTTONS
+    // ========================================
+    function initViewToggle() {
+      var buttons = document.querySelectorAll('.view-toggle button');
+      buttons.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var view = this.getAttribute('data-view');
+          if (view === currentView) return;
+          buttons.forEach(function(b) { b.classList.remove('active'); });
+          this.classList.add('active');
+          if (view === 'globe') morphToGlobe();
+          if (view === 'grid') morphToGrid();
+        });
+      });
+    }
+
+    // ========================================
+    // KEYBOARD
+    // ========================================
+    function onKeyDown(e) {
+      if (e.key === 'Escape') hideOverlay();
+    }
+
+    // ========================================
+    // BOOT
+    // ========================================
+    function init() {
+      initScene();
+      loadCards();
+      initViewToggle();
+
+      var canvas = renderer.domElement;
+      canvas.addEventListener('pointerdown', onPointerDown);
+      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', onPointerUp);
+      canvas.addEventListener('click', onClick);
+      document.getElementById('card-overlay').addEventListener('click', hideOverlay);
+      window.addEventListener('resize', onResize);
+      window.addEventListener('keydown', onKeyDown);
+
+      animate();
+    }
+
+    init();
+  })();
+  </script>
+</body>
+</html>
