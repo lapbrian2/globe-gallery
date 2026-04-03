@@ -478,6 +478,10 @@
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 
   <script>
+  window.onerror = function(msg, url, line) {
+    document.getElementById('loader-pct').textContent = 'ERR L' + line + ': ' + msg;
+    document.getElementById('loader-pct').style.color = '#B8964E';
+  };
   (function() {
     'use strict';
 
