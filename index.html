@@ -1275,6 +1275,8 @@
           mesh.userData.currentHover = 0;
           mesh.userData.revealDelay = 0; // set in onAllLoaded
           mesh.userData.revealTime = 0;
+          mesh.userData.isolateDim = 0; // 0 = bright, 1 = dimmed
+          mesh.userData.currentDim = 0;
 
           cards.push(mesh);
           globeGroup.add(mesh);
@@ -1346,7 +1348,10 @@
       autoSpeed = isGlobe ? AUTO_ROTATE : 0;
       targetZoom = isGlobe ? 16 : 12;
 
-      // Set morph targets on each card
+      var now = performance.now();
+
+      // Spiral unwrap: delay based on angular position (theta from Fibonacci)
+      // Cards peel off in a wave around the sphere
       cards.forEach(function(card, i) {
         var d = card.userData;
         var tp = isGlobe ? d.globePos : d.gridPos;
@@ -1355,10 +1360,22 @@
         d.morphQuat = tq.clone();
         d.morphStartQuat = card.quaternion.clone();
         d.morphT = 0;
-        d.morphDelay = performance.now() + Math.random() * 300;
+
+        // Spiral delay: use the card's angle around the sphere
+        var angle = Math.atan2(d.globePos.z, d.globePos.x); // -PI to PI
+        var normalized = (angle + Math.PI) / (Math.PI * 2); // 0 to 1
+        // Add vertical offset for spiral effect
+        var yNorm = (d.globePos.y / GLOBE_RADIUS + 1) * 0.5; // 0 to 1
+        var spiralT = (normalized + yNorm * 0.5) % 1.0;
+
+        if (isGlobe) {
+          // Reverse spiral when coming back to globe
+          d.morphDelay = now + (1.0 - spiralT) * 800;
+        } else {
+          d.morphDelay = now + spiralT * 800;
+        }
       });
 
-      // Reset globe rotation target
       morphingGlobeRotation = true;
 
       setTimeout(function() {
@@ -1409,6 +1426,64 @@
     var focusZoomActive = false;
     var focusZoomTarget = null;
     var focusZoomOrigZ = 0;
+
+    // Double-click isolate mode
+    var isolateMode = false;
+    var isolatedCard = null;
+    var ISOLATE_NEIGHBOR_COUNT = 6;
+
+    function onDblClick(e) {
+      if (!introPlayed || isTransitioning) return;
+
+      // If already isolated, restore everything
+      if (isolateMode) {
+        restoreFromIsolate();
+        return;
+      }
+
+      _raycaster.setFromCamera(_mouse, camera);
+      var hits = _raycaster.intersectObjects(cards);
+      if (hits.length === 0) return;
+
+      var card = hits[0].object;
+      isolatedCard = card;
+      isolateMode = true;
+
+      // Find nearest neighbors by distance on the sphere
+      var neighbors = cards.slice().sort(function(a, b) {
+        var da = a.position.distanceTo(card.position);
+        var db = b.position.distanceTo(card.position);
+        return da - db;
+      }).slice(0, ISOLATE_NEIGHBOR_COUNT + 1); // +1 includes the card itself
+
+      var neighborSet = new Set(neighbors);
+
+      // Dim all non-neighbor cards
+      cards.forEach(function(c) {
+        if (neighborSet.has(c)) {
+          c.userData.targetScale = c === card ? 1.3 : 1.0;
+          c.userData.isolateDim = 0; // bright
+        } else {
+          c.userData.isolateDim = 1; // dim
+          c.userData.targetScale = 0.6;
+        }
+      });
+
+      // Zoom toward the card
+      targetZoom = Math.max(8, targetZoom - 3);
+      autoSpeed = AUTO_ROTATE * 0.3; // slow down rotation
+    }
+
+    function restoreFromIsolate() {
+      isolateMode = false;
+      isolatedCard = null;
+      cards.forEach(function(c) {
+        c.userData.isolateDim = 0;
+        c.userData.targetScale = 1;
+      });
+      targetZoom = 16;
+      autoSpeed = AUTO_ROTATE;
+    }
 
     function onClick(e) {
       if (!introPlayed || isTransitioning || focusZoomActive) return;
@@ -1577,6 +1652,10 @@
         c.material.uniforms.uHover.value = d.currentHover;
         c.material.uniforms.uTime.value = time;
         c.material.uniforms.uCameraPos.value.copy(camera.position);
+
+        // Isolate mode dimming
+        d.currentDim += (d.isolateDim - d.currentDim) * 0.06;
+        c.material.opacity = 1.0 - d.currentDim * 0.75;
         // Brighten gold border on hover
         if (c.children[0]) {
           c.children[0].material.opacity = 0.1 + d.currentHover * 0.4;
@@ -1750,6 +1829,7 @@
       window.addEventListener('pointerup', onPointerUp);
       canvas.addEventListener('wheel', onWheel, { passive: false });
       canvas.addEventListener('click', onClick);
+      canvas.addEventListener('dblclick', onDblClick);
       document.getElementById('overlay-close').addEventListener('click', function(e) {
         e.stopPropagation();
         hideOverlay();
