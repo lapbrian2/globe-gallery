@@ -599,20 +599,34 @@
       'images/sl-7.webp',
       'images/sl-8.webp',
       'images/sl-9.webp',
+      'images/sl-u7768149725_AI-generated_editorial_portrait_hyperrealistic_re_d5a62b73-736b-44d4-bca5-5bef14558f23_0.png',
+      'images/sl-u7768149725_AI-generated_surreal_landscape_photography_select_25572075-47e4-4610-84d0-fb252e21bb71_0.png',
+      'images/sl-u7768149725_AI-generated_surreal_landscape_photography_select_25572075-47e4-4610-84d0-fb252e21bb71_3.png',
+      'images/sl-u7768149725_AI-generated_surreal_landscape_photography_select_87932a2d-44ed-44b8-9b33-7abc450e0fcf_0.png',
+      'images/sl-u7768149725_AI-generated_surreal_portait_photography_selectiv_de6b3067-4dce-4720-be6d-f57f29bd2fcc_1.png',
+      'images/sl-u7768149725_deep_blue_botanical_luxury_soft_theatrical_light1_33fa3625-fb7d-4943-bbe4-5f9fffc1b429_0.png',
+      'images/sl-u7768149725_deep_blue_botanical_luxury_soft_theatrical_light1_33fa3625-fb7d-4943-bbe4-5f9fffc1b429_3.png',
+      'images/sl-u7768149725_digital_painting_neo-expressionist_grotesque_carn_c4b3ed26-084c-4d3e-802a-02e886a0ffed_0.png',
+      'images/sl-u7768149725_digital_painting_neo-expressionist_grotesque_carn_c4b3ed26-084c-4d3e-802a-02e886a0ffed_1.png',
+      'images/sl-u7768149725_editorial_fashion_photograph_AI-generated_hyperre_faed0e5d-0c89-474e-908c-4cc487fa02e4_1.png',
+      'images/sl-u7768149725_high-end_sportswear_product_photography_glossy_sy_3e965b8a-c7fc-4dd5-a5c8-8b2fa703133e_1.png',
       'images/sl-u7768149725_oil_painting_impasto_heavy_palette_knife_brushstr_4642926a-9625-4c4c-8694-50054612dd90_0.png',
       'images/sl-u7768149725_oil_painting_with_neural_style_transfer_distortio_428fee46-d3cd-4608-a181-0ce9ab1c39e6_3.png',
+      'images/sl-u7768149725_oil_painting_with_neural_style_transfer_distortio_babfea5d-0eb4-4fa2-9bb6-23ead7fcfd4c_3.png',
+      'images/sl-u7768149725_silver_gelatin_black_and_white_photograph_1930s_H_ee08a7d4-1747-4172-8e98-171a38c32181_2.png',
       'images/sl-u7768149725_surrealist_fashion_photograph_baroque_theatrical__45040628-33ca-4b3c-9eec-1d52ce68191a_2 (1).png',
       'images/sl-u7768149725_surrealist_fashion_photograph_baroque_theatrical__45040628-33ca-4b3c-9eec-1d52ce68191a_2.png',
       'images/sl-u7768149725_surrealist_fashion_photograph_baroque_theatrical__f84ccbf9-7c82-42b3-bbad-e088f5c7790f_1.png',
       'images/sl-u7768149725_thick_impasto_oil_painting_palette_knife1.4_glowi_d31fb0ef-776b-4f54-a3e9-17de500ffa8d_0.png',
+      'images/sl-u7768149725_warm_amber_golden-hour_cinematography1.3_caramel__abe9f606-c568-4f78-8e20-a656266337d0_1.png',
       'images/u7768149725_dark_void_electric_violet_radial_gradients_emissi_cccb0fce-822d-47f4-bd2d-6c6da35d2701_1.png',
       'images/u7768149725_dark_void_electric_violet_radial_gradients_emissi_cccb0fce-822d-47f4-bd2d-6c6da35d2701_3.png',
       'images/u7768149725_two_intertwined_double_helix_structures_spiraling_b98931e1-ec6d-4c04-9f96-de48371271d4_0.png'
     ];
 
     var GLOBE_RADIUS = 7;
-    var CARD_W = 1.1;
-    var CARD_H = 1.1;
+    var CARD_W = 1.6;
+    var CARD_H = 1.6;
     var DAMPING = 0.94;
     var AUTO_ROTATE = 0.0008;
     var PARTICLE_COUNT = 350;
@@ -625,8 +639,8 @@
     var autoSpeed = AUTO_ROTATE;
     var hoveredCard = null;
     var loadedCount = 0;
-    var targetZoom = 22;
-    var currentZoom = 22;
+    var targetZoom = 20;
+    var currentZoom = 20;
     var introPlayed = false;
     var showFPS = false;
     var morphingGlobeRotation = false;
@@ -644,7 +658,7 @@
     var overlayIndex = -1;
 
     // Three.js
-    var renderer, scene, camera, globeGroup, particleSystem, wireframeGlobe;
+    var renderer, scene, camera, globeGroup, particleSystem;
     var cards = [];
     var clock;
 
@@ -836,19 +850,8 @@
       globeGroup = new THREE.Group();
       scene.add(globeGroup);
 
-      // Wireframe globe skeleton — dim base grid
-      var wireGeo = new THREE.IcosahedronGeometry(GLOBE_RADIUS * 0.98, 3);
-      var wireMat = new THREE.MeshBasicMaterial({
-        color: 0xB8964E,
-        wireframe: true,
-        transparent: true,
-        opacity: 0.03,
-        depthWrite: false
-      });
-      wireframeGlobe = new THREE.Mesh(wireGeo, wireMat);
-      globeGroup.add(wireframeGlobe);
-
-      // Streetlight points — bright dots at grid vertices that twinkle
+      // Streetlight points — the ONLY structural element defining the sphere
+      // No wireframe grid — just twinkling points of light
       var lightGeo = new THREE.BufferGeometry();
       var wirePositions = wireGeo.attributes.position.array;
       var lightCount = wireGeo.attributes.position.count;
@@ -885,7 +888,7 @@
         depthWrite: false,
         blending: THREE.AdditiveBlending,
         uniforms: {
-          uSize: { value: 4.0 },
+          uSize: { value: 8.0 },
           uPixelRatio: { value: Math.min(window.devicePixelRatio, 2) }
         },
         vertexShader: [
@@ -1013,167 +1016,6 @@
         gp.geometry.attributes.position.needsUpdate = true;
         gp.rotation.y = -time * 0.005;
       }
-    }
-
-    // ========================================
-    // 7B. WEB AUDIO — AMBIENT SOUND DESIGN
-    // ========================================
-    var audioCtx = null;
-    var droneOsc = null;
-    var droneGain = null;
-    var hoverOsc = null;
-    var hoverGain = null;
-    var audioStarted = false;
-
-    function initAudio() {
-      if (audioStarted) return;
-      try {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-        // Ambient drone — low continuous hum
-        droneOsc = audioCtx.createOscillator();
-        droneOsc.type = 'sine';
-        droneOsc.frequency.value = 55; // A1 — deep sub-bass
-        droneGain = audioCtx.createGain();
-        droneGain.gain.value = 0;
-        // Second harmonic for richness
-        var drone2 = audioCtx.createOscillator();
-        drone2.type = 'sine';
-        drone2.frequency.value = 82.5; // fifth above
-        var drone2Gain = audioCtx.createGain();
-        drone2Gain.gain.value = 0;
-
-        droneOsc.connect(droneGain);
-        drone2.connect(drone2Gain);
-        droneGain.connect(audioCtx.destination);
-        drone2Gain.connect(audioCtx.destination);
-        droneOsc.start();
-        drone2.start();
-
-        // Fade in drone over 3 seconds
-        droneGain.gain.linearRampToValueAtTime(0.03, audioCtx.currentTime + 3);
-        drone2Gain.gain.linearRampToValueAtTime(0.015, audioCtx.currentTime + 3);
-
-        // Store for pitch modulation
-        window._droneOsc = droneOsc;
-        window._droneGain = droneGain;
-        window._drone2 = drone2;
-        window._drone2Gain = drone2Gain;
-
-        // Hover tone — crystalline, starts silent
-        hoverOsc = audioCtx.createOscillator();
-        hoverOsc.type = 'triangle';
-        hoverOsc.frequency.value = 880;
-        hoverGain = audioCtx.createGain();
-        hoverGain.gain.value = 0;
-        hoverOsc.connect(hoverGain);
-        hoverGain.connect(audioCtx.destination);
-        hoverOsc.start();
-
-        audioStarted = true;
-      } catch (e) {
-        // Audio not available — silent fallback
-      }
-    }
-
-    function playHoverTone(cardIndex) {
-      if (!audioCtx || !hoverGain) return;
-      // Map card index to a pentatonic note for pleasant tones
-      var pentatonic = [261.6, 293.7, 329.6, 392.0, 440.0, 523.3, 587.3, 659.3];
-      var note = pentatonic[cardIndex % pentatonic.length];
-      hoverOsc.frequency.setValueAtTime(note, audioCtx.currentTime);
-      hoverGain.gain.cancelScheduledValues(audioCtx.currentTime);
-      hoverGain.gain.setValueAtTime(0.02, audioCtx.currentTime);
-      hoverGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.6);
-    }
-
-    function playClickThud() {
-      if (!audioCtx) return;
-      try {
-        var osc = audioCtx.createOscillator();
-        var gain = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.value = 80;
-        osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.25);
-      } catch (e) {}
-    }
-
-    function modulateDrone(rotationSpeed) {
-      if (!window._droneOsc || !audioCtx) return;
-      // Shift drone pitch slightly based on drag velocity
-      var pitchShift = Math.abs(rotationSpeed) * 200;
-      window._droneOsc.frequency.linearRampToValueAtTime(
-        55 + pitchShift, audioCtx.currentTime + 0.1
-      );
-    }
-
-    // ========================================
-    // 7C. CONSTELLATION CONNECTION LINES
-    // ========================================
-    var connectionLines = null;
-    var connectionData = [];
-    var MAX_CONNECTIONS = 300;
-    var CONNECTION_DISTANCE = 2.8;
-
-    function initConnections() {
-      var lineGeo = new THREE.BufferGeometry();
-      var linePositions = new Float32Array(MAX_CONNECTIONS * 6); // 2 points per line, 3 coords each
-      var lineAlphas = new Float32Array(MAX_CONNECTIONS * 2);
-      lineGeo.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
-      lineGeo.setDrawRange(0, 0);
-
-      var lineMat = new THREE.LineBasicMaterial({
-        color: 0xB8964E,
-        transparent: true,
-        opacity: 0.08,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending
-      });
-
-      connectionLines = new THREE.LineSegments(lineGeo, lineMat);
-      globeGroup.add(connectionLines);
-    }
-
-    function updateConnections() {
-      if (!connectionLines || cards.length < 2) return;
-      var positions = connectionLines.geometry.attributes.position.array;
-      var count = 0;
-      var hovIdx = hoveredCard ? hoveredCard.userData.index : -1;
-
-      for (var a = 0; a < cards.length && count < MAX_CONNECTIONS; a++) {
-        var ca = cards[a];
-        if (ca.userData.currentScale < 0.5) continue;
-        for (var b = a + 1; b < cards.length && count < MAX_CONNECTIONS; b++) {
-          var cb = cards[b];
-          if (cb.userData.currentScale < 0.5) continue;
-          var dx = ca.position.x - cb.position.x;
-          var dy = ca.position.y - cb.position.y;
-          var dz = ca.position.z - cb.position.z;
-          var dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
-          if (dist < CONNECTION_DISTANCE) {
-            var idx = count * 6;
-            positions[idx]     = ca.position.x;
-            positions[idx + 1] = ca.position.y;
-            positions[idx + 2] = ca.position.z;
-            positions[idx + 3] = cb.position.x;
-            positions[idx + 4] = cb.position.y;
-            positions[idx + 5] = cb.position.z;
-            count++;
-          }
-        }
-      }
-
-      connectionLines.geometry.setDrawRange(0, count * 2);
-      connectionLines.geometry.attributes.position.needsUpdate = true;
-
-      // Brighten when hovering — connected cards glow
-      connectionLines.material.opacity = hovIdx >= 0 ? 0.15 : 0.06;
     }
 
     // ========================================
@@ -1305,7 +1147,7 @@
         document.getElementById('loader').classList.add('hidden');
 
         // Start camera dolly slowly — show just the grid in void
-        targetZoom = 16;
+        targetZoom = 15;
 
         // Start audio on first interaction requirement — but init context
         // (actual start deferred to first click/touch)
@@ -1319,7 +1161,7 @@
 
       // PHASE 2: Cards materialize from center outward (after 3s of grid-only)
       setTimeout(function() {
-        targetZoom = 14;
+        targetZoom = 12;
 
         // Sort cards by distance from globe center for inside-out reveal
         var sorted = cards.slice().sort(function(a, b) {
@@ -1363,7 +1205,7 @@
 
       var isGlobe = view === 'globe';
       autoSpeed = isGlobe ? AUTO_ROTATE : 0;
-      targetZoom = isGlobe ? 14 : 11;
+      targetZoom = isGlobe ? 12 : 9;
 
       // Set morph targets on each card
       cards.forEach(function(card, i) {
@@ -1390,7 +1232,6 @@
     // 11. INTERACTION
     // ========================================
     function onPointerDown(e) {
-      initAudio();
       isDragging = true;
       prevMX = e.clientX;
       prevMY = e.clientY;
@@ -1431,13 +1272,10 @@
     }
 
     function onClick(e) {
-      // Init audio on first user gesture (browser requirement)
-      initAudio();
       if (!introPlayed || isTransitioning) return;
       _raycaster.setFromCamera(_mouse, camera);
       var hits = _raycaster.intersectObjects(cards);
       if (hits.length > 0) {
-        playClickThud();
         showOverlay(hits[0].object.userData);
       }
     }
@@ -1600,15 +1438,7 @@
           hoveredCard.userData.targetScale = 1.12;
           hoveredCard.userData.targetHover = 1;
           cursorRing.classList.add('hovering');
-          playHoverTone(target.userData.index);
         }
-      }
-
-      // Wireframe globe — subtle base grid
-      if (wireframeGlobe) {
-        wireframeGlobe.material.opacity = 0.025 + Math.sin(time * 0.3) * 0.01;
-        wireframeGlobe.rotation.y = time * 0.012;
-        wireframeGlobe.rotation.x = Math.sin(time * 0.1) * 0.03;
       }
 
       // Streetlights — twinkle like city lights from space
@@ -1624,20 +1454,14 @@
           var sharp = pulse * pulse * pulse; // cubic falloff — bright peak, long dim
           // Random bright spikes — ~5% chance per frame of flaring
           var spike = Math.sin(time * 7.3 + si * 2.17) * Math.cos(time * 4.1 + si * 1.53);
-          var flare = spike > 0.92 ? 1.0 : 0.0;
-          slAlphas[si] = Math.max(0.02, sharp * 0.5 + flare * 0.8);
+          var flare = spike > 0.82 ? 1.0 : 0.0;
+          slAlphas[si] = Math.max(0.05, sharp * 0.6 + flare * 1.0);
         }
         sl.geometry.attributes.alpha.needsUpdate = true;
         // Use the alpha attribute via size — brighter lights appear bigger
         var slSizes = sl.geometry.attributes.position.array;
         sl.material.size = 0.07 + Math.sin(time * 0.6) * 0.01;
       }
-
-      // Constellation connection lines
-      updateConnections();
-
-      // Drone pitch modulation from rotation velocity
-      modulateDrone(velY);
 
       // Particles
       updateParticles(time);
@@ -1701,7 +1525,6 @@
     // ========================================
     function init() {
       initScene();
-      initConnections();
       loadCards();
       initViewToggle();
 
