@@ -933,6 +933,130 @@
       globeGroup.add(wireframeGlobe);
 
       initParticles();
+      initGaussianSplats();
+    }
+
+    // ========================================
+    // 6B. GAUSSIAN SPLAT NEBULA
+    // ========================================
+    var splatSystem = null;
+    var SPLAT_COUNT = 400;
+
+    function initGaussianSplats() {
+      var geo = new THREE.BufferGeometry();
+      var positions = new Float32Array(SPLAT_COUNT * 3);
+      var colors = new Float32Array(SPLAT_COUNT * 3);
+      var sizes = new Float32Array(SPLAT_COUNT);
+      var alphas = new Float32Array(SPLAT_COUNT);
+      var phases = new Float32Array(SPLAT_COUNT);
+
+      // Color palette — warm golds, deep blues, muted reds, cool greys
+      var palette = [
+        [0.722, 0.588, 0.306],  // gold
+        [0.85, 0.75, 0.45],     // bright gold
+        [0.3, 0.35, 0.55],      // deep blue
+        [0.15, 0.2, 0.35],      // dark blue
+        [0.5, 0.25, 0.2],       // muted red
+        [0.35, 0.32, 0.3],      // warm grey
+        [0.6, 0.5, 0.35],       // amber
+        [0.2, 0.25, 0.3],       // cool grey
+      ];
+
+      for (var i = 0; i < SPLAT_COUNT; i++) {
+        // Distribute in a shell around the globe — inner and outer
+        var phi = Math.random() * Math.PI * 2;
+        var cosTheta = (Math.random() - 0.5) * 2;
+        var sinTheta = Math.sqrt(1 - cosTheta * cosTheta);
+        // Radius: concentrated near the globe surface with some scatter
+        var r = GLOBE_RADIUS * (0.7 + Math.random() * 0.8);
+
+        positions[i * 3]     = Math.cos(phi) * sinTheta * r;
+        positions[i * 3 + 1] = cosTheta * r;
+        positions[i * 3 + 2] = Math.sin(phi) * sinTheta * r;
+
+        // Pick color from palette
+        var c = palette[Math.floor(Math.random() * palette.length)];
+        colors[i * 3]     = c[0];
+        colors[i * 3 + 1] = c[1];
+        colors[i * 3 + 2] = c[2];
+
+        // Variable sizes — most small, some large
+        sizes[i] = 0.3 + Math.random() * Math.random() * 1.5;
+        alphas[i] = 0.02 + Math.random() * 0.06;
+        phases[i] = Math.random() * Math.PI * 2;
+      }
+
+      geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+      geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+      geo.setAttribute('alpha', new THREE.BufferAttribute(alphas, 1));
+
+      var splatMat = new THREE.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        uniforms: {
+          uTime: { value: 0 },
+          uPixelRatio: { value: Math.min(window.devicePixelRatio, 2) }
+        },
+        vertexShader: [
+          'attribute float size;',
+          'attribute float alpha;',
+          'attribute vec3 color;',
+          'varying float vAlpha;',
+          'varying vec3 vColor;',
+          'uniform float uTime;',
+          'uniform float uPixelRatio;',
+          'void main() {',
+          '  vAlpha = alpha;',
+          '  vColor = color;',
+          '  // Gentle drift',
+          '  vec3 pos = position;',
+          '  pos.x += sin(uTime * 0.15 + position.y * 0.5) * 0.3;',
+          '  pos.y += cos(uTime * 0.12 + position.x * 0.4) * 0.2;',
+          '  pos.z += sin(uTime * 0.1 + position.z * 0.3) * 0.25;',
+          '  vec4 mvPos = modelViewMatrix * vec4(pos, 1.0);',
+          '  gl_PointSize = size * uPixelRatio * 80.0 * (1.0 / -mvPos.z);',
+          '  gl_Position = projectionMatrix * mvPos;',
+          '}'
+        ].join('\n'),
+        fragmentShader: [
+          'varying float vAlpha;',
+          'varying vec3 vColor;',
+          'void main() {',
+          '  // Gaussian falloff — soft circular blob',
+          '  vec2 center = gl_PointCoord - 0.5;',
+          '  float dist = dot(center, center);',
+          '  // True Gaussian: exp(-dist * sharpness)',
+          '  float gaussian = exp(-dist * 8.0);',
+          '  // Fade edges completely',
+          '  float alpha = gaussian * vAlpha;',
+          '  if (alpha < 0.001) discard;',
+          '  gl_FragColor = vec4(vColor, alpha);',
+          '}'
+        ].join('\n')
+      });
+
+      splatSystem = new THREE.Points(geo, splatMat);
+      splatSystem.userData.phases = phases;
+      splatSystem.userData.alphas = alphas;
+      splatSystem.userData.baseAlphas = new Float32Array(alphas);
+      splatSystem.userData.count = SPLAT_COUNT;
+      globeGroup.add(splatSystem);
+    }
+
+    function updateSplats(time) {
+      if (!splatSystem) return;
+      splatSystem.material.uniforms.uTime.value = time;
+
+      // Subtle alpha pulsing per splat
+      var a = splatSystem.userData.alphas;
+      var base = splatSystem.userData.baseAlphas;
+      var phases = splatSystem.userData.phases;
+      for (var i = 0; i < splatSystem.userData.count; i++) {
+        a[i] = base[i] * (0.6 + 0.4 * Math.sin(time * 0.4 + phases[i]));
+      }
+      splatSystem.geometry.attributes.alpha.needsUpdate = true;
     }
 
     // ========================================
@@ -1488,6 +1612,9 @@
         wireframeGlobe.rotation.y = time * 0.015;
         wireframeGlobe.rotation.x = Math.sin(time * 0.12) * 0.04;
       }
+
+      // Gaussian splat nebula
+      updateSplats(time);
 
       // Particles
       updateParticles(time);
