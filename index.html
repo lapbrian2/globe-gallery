@@ -867,7 +867,7 @@
       scene.add(globeGroup);
 
       // Streetlight points — the ONLY structural element defining the sphere
-      // No wireframe grid — just twinkling points of light
+      var wireGeo = new THREE.IcosahedronGeometry(GLOBE_RADIUS * 0.98, 3);
       var lightGeo = new THREE.BufferGeometry();
       var wirePositions = wireGeo.attributes.position.array;
       var lightCount = wireGeo.attributes.position.count;
