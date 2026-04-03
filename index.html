@@ -384,6 +384,20 @@
     .overlay-next { right: 2.5rem; }
 
     /* ========================================
+       BACKGROUND NOISE TEXTURE
+    ======================================== */
+    .bg-noise {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0.035;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      background-size: 256px 256px;
+    }
+
+    /* ========================================
        SCREEN VIGNETTE
     ======================================== */
     .screen-vignette {
@@ -400,16 +414,47 @@
     @media (max-width: 768px) {
       html, body { cursor: auto; }
       .cursor-dot, .cursor-ring { display: none; }
-      .title-bar { top: 1.25rem; left: 1.25rem; }
-      .image-count { top: 1.25rem; right: 1.25rem; }
-      .view-toggle { bottom: 1.25rem; }
+      .title-bar { top: 1rem; left: 1rem; }
+      .title-bar h1 { font-size: 1.1rem; }
+      .title-bar .overline { font-size: 0.5rem; }
+      .image-count { top: 1rem; right: 1rem; }
+      .image-count .number { font-size: 1.1rem; }
+      .view-toggle { bottom: 1rem; }
+      .view-toggle button { padding: 0.5rem 1rem; font-size: 0.55rem; cursor: pointer; }
       .zoom-hint { display: none; }
-      .view-toggle button { cursor: pointer; }
-      .overlay-close { cursor: pointer; }
-      .overlay-nav { cursor: pointer; }
-      .overlay-prev { left: 1rem; }
-      .overlay-next { right: 1rem; }
+      .overlay-close { cursor: pointer; top: 1rem; right: 1rem; }
+      .overlay-nav { cursor: pointer; width: 2.5rem; height: 2.5rem; }
+      .overlay-prev { left: 0.75rem; }
+      .overlay-next { right: 0.75rem; }
+      #card-overlay img { max-width: 92vw; max-height: 70vh; }
+      .screen-vignette { background: radial-gradient(ellipse at center, transparent 30%, rgba(9,9,11,0.8) 100%); }
     }
+
+    @media (max-width: 480px) {
+      .title-bar h1 { font-size: 0.9rem; }
+      .image-count .number { font-size: 0.9rem; }
+      .view-toggle button { padding: 0.4rem 0.8rem; }
+    }
+
+    /* ========================================
+       EASTER EGG MODES
+    ======================================== */
+    body.gold-mode #canvas-wrap {
+      filter: sepia(0.3) saturate(1.5) brightness(1.1);
+      transition: filter 0.6s ease;
+    }
+    body.invert-mode {
+      background: var(--gallery-white);
+    }
+    body.invert-mode #canvas-wrap {
+      filter: invert(1) hue-rotate(180deg);
+      transition: filter 0.6s ease;
+    }
+    body.invert-mode .title-bar h1,
+    body.invert-mode .image-count .number { color: var(--ink); }
+    body.invert-mode .title-bar .overline,
+    body.invert-mode .image-count .label,
+    body.invert-mode .overlay-meta span { color: var(--carbon); }
 
     /* ========================================
        REDUCED MOTION
@@ -440,6 +485,9 @@
 
   <!-- THREE.JS CANVAS -->
   <div id="canvas-wrap"></div>
+
+  <!-- BACKGROUND NOISE -->
+  <div class="bg-noise"></div>
 
   <!-- SCREEN VIGNETTE -->
   <div class="screen-vignette"></div>
@@ -530,18 +578,18 @@
       'images/7.webp',
       'images/8.webp',
       'images/9.webp',
-      'images/Brian_Lapinski_Biomorphic_Theater__organic_futurism_wrapped_around_precision_cu_14e316fe-0218-4fa8-a950-3013d40fe927.png',
-      'images/Brian_Lapinski_Biomorphic_Theater__organic_futurism_wrapped_around_precision_cu_2e2d9e8a-627d-4998-973b-389a37c8db2d.png',
-      'images/Brian_Lapinski_Biomorphic_Theater__organic_futurism_wrapped_around_precision_cu_3ea25e7a-c4da-4f22-82e4-037cf9f66bf4.png',
-      'images/Brian_Lapinski_commercial_food_photography_single_key_light_from_upper-right_wi_73bcd867-4967-4560-9126-9447c450a338.png',
-      'images/Brian_Lapinski_contemporary_Japanese_fine_dining_dish_photographed_as_dark-fiel_0df08629-051f-4024-bcfe-4e6397f7c522.png',
-      'images/Brian_Lapinski_contemporary_Japanese_fine_dining_dish_photographed_as_dark-fiel_0ef64685-a1ba-442f-90be-da4fff7889a6.png',
-      'images/Brian_Lapinski_contemporary_Japanese_fine_dining_dish_photographed_as_dark-fiel_b816bf52-8798-4822-950a-9fc67fd3ce28.png',
-      'images/Brian_Lapinski_contemporary_Japanese_fine_dining_dish_photographed_as_dark-fiel_db908254-c5b9-434a-bf1b-93a855e8b3f7.png',
-      'images/Brian_Lapinski_digital_collage_moodboard_dense_rectangular_grid_layout_with_ov_66c774fc-951d-45e4-b1c9-e7e5abe47bfd.png',
-      'images/Brian_Lapinski_professional_studio_automotive_photography_high-gloss_rosso_cor_f352a294-6b62-4a04-918d-8dabb5c2b7ad.png',
-      'images/Brian_Lapinski_warm_golden-hour_naturalistic_light_soft_diffused_environmental_c37d9ae9-06f1-4282-b7f0-31a192392cc7.png',
-      'images/head-with-Flowers.png',
+      'images/Brian_Lapinski_Biomorphic_Theater__organic_futurism_wrapped_around_precision_cu_14e316fe-0218-4fa8-a950-3013d40fe927.webp',
+      'images/Brian_Lapinski_Biomorphic_Theater__organic_futurism_wrapped_around_precision_cu_2e2d9e8a-627d-4998-973b-389a37c8db2d.webp',
+      'images/Brian_Lapinski_Biomorphic_Theater__organic_futurism_wrapped_around_precision_cu_3ea25e7a-c4da-4f22-82e4-037cf9f66bf4.webp',
+      'images/Brian_Lapinski_commercial_food_photography_single_key_light_from_upper-right_wi_73bcd867-4967-4560-9126-9447c450a338.webp',
+      'images/Brian_Lapinski_contemporary_Japanese_fine_dining_dish_photographed_as_dark-fiel_0df08629-051f-4024-bcfe-4e6397f7c522.webp',
+      'images/Brian_Lapinski_contemporary_Japanese_fine_dining_dish_photographed_as_dark-fiel_0ef64685-a1ba-442f-90be-da4fff7889a6.webp',
+      'images/Brian_Lapinski_contemporary_Japanese_fine_dining_dish_photographed_as_dark-fiel_b816bf52-8798-4822-950a-9fc67fd3ce28.webp',
+      'images/Brian_Lapinski_contemporary_Japanese_fine_dining_dish_photographed_as_dark-fiel_db908254-c5b9-434a-bf1b-93a855e8b3f7.webp',
+      'images/Brian_Lapinski_digital_collage_moodboard_dense_rectangular_grid_layout_with_ov_66c774fc-951d-45e4-b1c9-e7e5abe47bfd.webp',
+      'images/Brian_Lapinski_professional_studio_automotive_photography_high-gloss_rosso_cor_f352a294-6b62-4a04-918d-8dabb5c2b7ad.webp',
+      'images/Brian_Lapinski_warm_golden-hour_naturalistic_light_soft_diffused_environmental_c37d9ae9-06f1-4282-b7f0-31a192392cc7.webp',
+      'images/head-with-Flowers.webp',
       'images/sl-1.webp',
       'images/sl-10.webp',
       'images/sl-11.webp',
@@ -586,7 +634,7 @@
       'images/sl-47.webp',
       'images/sl-49-1.webp',
       'images/sl-49-2.webp',
-      'images/sl-5.jpg',
+      'images/sl-5.webp',
       'images/sl-51-1.webp',
       'images/sl-51-2.webp',
       'images/sl-52.webp',
@@ -603,29 +651,29 @@
       'images/sl-7.webp',
       'images/sl-8.webp',
       'images/sl-9.webp',
-      'images/sl-u7768149725_AI-generated_editorial_portrait_hyperrealistic_re_d5a62b73-736b-44d4-bca5-5bef14558f23_0.png',
-      'images/sl-u7768149725_AI-generated_surreal_landscape_photography_select_25572075-47e4-4610-84d0-fb252e21bb71_0.png',
-      'images/sl-u7768149725_AI-generated_surreal_landscape_photography_select_25572075-47e4-4610-84d0-fb252e21bb71_3.png',
-      'images/sl-u7768149725_AI-generated_surreal_landscape_photography_select_87932a2d-44ed-44b8-9b33-7abc450e0fcf_0.png',
-      'images/sl-u7768149725_AI-generated_surreal_portait_photography_selectiv_de6b3067-4dce-4720-be6d-f57f29bd2fcc_1.png',
-      'images/sl-u7768149725_deep_blue_botanical_luxury_soft_theatrical_light1_33fa3625-fb7d-4943-bbe4-5f9fffc1b429_0.png',
-      'images/sl-u7768149725_deep_blue_botanical_luxury_soft_theatrical_light1_33fa3625-fb7d-4943-bbe4-5f9fffc1b429_3.png',
-      'images/sl-u7768149725_digital_painting_neo-expressionist_grotesque_carn_c4b3ed26-084c-4d3e-802a-02e886a0ffed_0.png',
-      'images/sl-u7768149725_digital_painting_neo-expressionist_grotesque_carn_c4b3ed26-084c-4d3e-802a-02e886a0ffed_1.png',
-      'images/sl-u7768149725_editorial_fashion_photograph_AI-generated_hyperre_faed0e5d-0c89-474e-908c-4cc487fa02e4_1.png',
-      'images/sl-u7768149725_high-end_sportswear_product_photography_glossy_sy_3e965b8a-c7fc-4dd5-a5c8-8b2fa703133e_1.png',
-      'images/sl-u7768149725_oil_painting_impasto_heavy_palette_knife_brushstr_4642926a-9625-4c4c-8694-50054612dd90_0.png',
-      'images/sl-u7768149725_oil_painting_with_neural_style_transfer_distortio_428fee46-d3cd-4608-a181-0ce9ab1c39e6_3.png',
-      'images/sl-u7768149725_oil_painting_with_neural_style_transfer_distortio_babfea5d-0eb4-4fa2-9bb6-23ead7fcfd4c_3.png',
-      'images/sl-u7768149725_silver_gelatin_black_and_white_photograph_1930s_H_ee08a7d4-1747-4172-8e98-171a38c32181_2.png',
-      'images/sl-u7768149725_surrealist_fashion_photograph_baroque_theatrical__45040628-33ca-4b3c-9eec-1d52ce68191a_2-1.png',
-      'images/sl-u7768149725_surrealist_fashion_photograph_baroque_theatrical__45040628-33ca-4b3c-9eec-1d52ce68191a_2.png',
-      'images/sl-u7768149725_surrealist_fashion_photograph_baroque_theatrical__f84ccbf9-7c82-42b3-bbad-e088f5c7790f_1.png',
-      'images/sl-u7768149725_thick_impasto_oil_painting_palette_knife1.4_glowi_d31fb0ef-776b-4f54-a3e9-17de500ffa8d_0.png',
-      'images/sl-u7768149725_warm_amber_golden-hour_cinematography1.3_caramel__abe9f606-c568-4f78-8e20-a656266337d0_1.png',
-      'images/u7768149725_dark_void_electric_violet_radial_gradients_emissi_cccb0fce-822d-47f4-bd2d-6c6da35d2701_1.png',
-      'images/u7768149725_dark_void_electric_violet_radial_gradients_emissi_cccb0fce-822d-47f4-bd2d-6c6da35d2701_3.png',
-      'images/u7768149725_two_intertwined_double_helix_structures_spiraling_b98931e1-ec6d-4c04-9f96-de48371271d4_0.png'
+      'images/sl-u7768149725_AI-generated_editorial_portrait_hyperrealistic_re_d5a62b73-736b-44d4-bca5-5bef14558f23_0.webp',
+      'images/sl-u7768149725_AI-generated_surreal_landscape_photography_select_25572075-47e4-4610-84d0-fb252e21bb71_0.webp',
+      'images/sl-u7768149725_AI-generated_surreal_landscape_photography_select_25572075-47e4-4610-84d0-fb252e21bb71_3.webp',
+      'images/sl-u7768149725_AI-generated_surreal_landscape_photography_select_87932a2d-44ed-44b8-9b33-7abc450e0fcf_0.webp',
+      'images/sl-u7768149725_AI-generated_surreal_portait_photography_selectiv_de6b3067-4dce-4720-be6d-f57f29bd2fcc_1.webp',
+      'images/sl-u7768149725_deep_blue_botanical_luxury_soft_theatrical_light1_33fa3625-fb7d-4943-bbe4-5f9fffc1b429_0.webp',
+      'images/sl-u7768149725_deep_blue_botanical_luxury_soft_theatrical_light1_33fa3625-fb7d-4943-bbe4-5f9fffc1b429_3.webp',
+      'images/sl-u7768149725_digital_painting_neo-expressionist_grotesque_carn_c4b3ed26-084c-4d3e-802a-02e886a0ffed_0.webp',
+      'images/sl-u7768149725_digital_painting_neo-expressionist_grotesque_carn_c4b3ed26-084c-4d3e-802a-02e886a0ffed_1.webp',
+      'images/sl-u7768149725_editorial_fashion_photograph_AI-generated_hyperre_faed0e5d-0c89-474e-908c-4cc487fa02e4_1.webp',
+      'images/sl-u7768149725_high-end_sportswear_product_photography_glossy_sy_3e965b8a-c7fc-4dd5-a5c8-8b2fa703133e_1.webp',
+      'images/sl-u7768149725_oil_painting_impasto_heavy_palette_knife_brushstr_4642926a-9625-4c4c-8694-50054612dd90_0.webp',
+      'images/sl-u7768149725_oil_painting_with_neural_style_transfer_distortio_428fee46-d3cd-4608-a181-0ce9ab1c39e6_3.webp',
+      'images/sl-u7768149725_oil_painting_with_neural_style_transfer_distortio_babfea5d-0eb4-4fa2-9bb6-23ead7fcfd4c_3.webp',
+      'images/sl-u7768149725_silver_gelatin_black_and_white_photograph_1930s_H_ee08a7d4-1747-4172-8e98-171a38c32181_2.webp',
+      'images/sl-u7768149725_surrealist_fashion_photograph_baroque_theatrical__45040628-33ca-4b3c-9eec-1d52ce68191a_2-1.webp',
+      'images/sl-u7768149725_surrealist_fashion_photograph_baroque_theatrical__45040628-33ca-4b3c-9eec-1d52ce68191a_2.webp',
+      'images/sl-u7768149725_surrealist_fashion_photograph_baroque_theatrical__f84ccbf9-7c82-42b3-bbad-e088f5c7790f_1.webp',
+      'images/sl-u7768149725_thick_impasto_oil_painting_palette_knife1.4_glowi_d31fb0ef-776b-4f54-a3e9-17de500ffa8d_0.webp',
+      'images/sl-u7768149725_warm_amber_golden-hour_cinematography1.3_caramel__abe9f606-c568-4f78-8e20-a656266337d0_1.webp',
+      'images/u7768149725_dark_void_electric_violet_radial_gradients_emissi_cccb0fce-822d-47f4-bd2d-6c6da35d2701_1.webp',
+      'images/u7768149725_dark_void_electric_violet_radial_gradients_emissi_cccb0fce-822d-47f4-bd2d-6c6da35d2701_3.webp',
+      'images/u7768149725_two_intertwined_double_helix_structures_spiraling_b98931e1-ec6d-4c04-9f96-de48371271d4_0.webp'
     ];
 
     var GLOBE_RADIUS = 7;
@@ -1124,42 +1172,52 @@
       uiEls.forEach(function(id) {
         var el = document.getElementById(id);
         el.style.opacity = '0';
-        el.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
+        el.style.transition = 'opacity 1.2s ease';
       });
 
+      // PHASE 1 — Grid in darkness (0-2.5s)
+      // Loader fades, only streetlights + wireframe visible. Title appears.
       setTimeout(function() {
         document.getElementById('loader').classList.add('hidden');
+        targetZoom = 16;
 
-        // Dolly camera in
-        targetZoom = 14;
-
-        // Set card reveal targets with staggered delays
-        var revealStart = performance.now() + 300;
-        cards.forEach(function(card, i) {
-          card.userData.targetScale = 1;
-          card.userData.revealDelay = revealStart + i * 25;
-        });
-
-        // Fade in UI via CSS transitions
+        // Title fades in over the dark grid
         setTimeout(function() {
           document.getElementById('title-bar').style.opacity = '1';
-        }, 800);
+        }, 400);
+      }, 300);
+
+      // PHASE 2 — Cards materialize (2.5s+)
+      // Sorted from poles inward — like thoughts forming from a seed
+      setTimeout(function() {
+        targetZoom = 13;
+
+        var sorted = cards.slice().sort(function(a, b) {
+          return Math.abs(b.userData.globePos.y) - Math.abs(a.userData.globePos.y);
+        });
+
+        var revealStart = performance.now();
+        sorted.forEach(function(card, i) {
+          card.userData.targetScale = 1;
+          card.userData.revealDelay = revealStart + i * 30;
+        });
+
         setTimeout(function() {
           document.getElementById('image-count').style.opacity = '1';
-        }, 900);
+        }, 600);
         setTimeout(function() {
           document.getElementById('view-toggle').style.opacity = '1';
-        }, 1000);
+        }, 1200);
         setTimeout(function() {
           document.getElementById('zoom-hint').style.opacity = '1';
-        }, 1400);
+        }, 2000);
 
         introPlayed = true;
 
         setTimeout(function() {
           document.getElementById('zoom-hint').classList.add('faded');
-        }, 6000);
-      }, 400);
+        }, 7000);
+      }, 2500);
     }
 
     // ========================================
@@ -1318,6 +1376,10 @@
         // Auto-rotate
         globeGroup.rotation.y += autoSpeed;
 
+        // Globe breathing — subtle scale pulse
+        var breathScale = 1.0 + Math.sin(time * 0.3) * 0.008;
+        globeGroup.scale.set(breathScale, breathScale, breathScale);
+
         // Drag — apply always, dampen on release
         globeGroup.rotation.y += velY;
         globeGroup.rotation.x += velX;
@@ -1465,15 +1527,66 @@
     }
 
     // ========================================
-    // 16. KEYBOARD
+    // 16. KEYBOARD + EASTER EGGS
     // ========================================
+    var konamiSeq = [38,38,40,40,37,39,37,39,66,65];
+    var konamiIdx = 0;
+    var typedBuffer = '';
+    var goldMode = false;
+
+    function resetAllModes() {
+      goldMode = false;
+      document.body.classList.remove('gold-mode', 'invert-mode');
+    }
+
+    function triggerGoldMode() {
+      resetAllModes();
+      goldMode = true;
+      document.body.classList.add('gold-mode');
+      // Burst all cards to 1.15 scale then settle
+      cards.forEach(function(c) {
+        c.userData.targetScale = 1.2;
+        setTimeout(function() { c.userData.targetScale = 1; }, 800);
+      });
+      // Flash the streetlights bright
+      var sl = window._streetLights;
+      if (sl) {
+        var a = sl.userData.alphas;
+        for (var i = 0; i < sl.userData.count; i++) a[i] = 1.0;
+        sl.geometry.attributes.alpha.needsUpdate = true;
+      }
+    }
+
+    function triggerInvertMode() {
+      resetAllModes();
+      document.body.classList.toggle('invert-mode');
+    }
+
     function onKeyDown(e) {
-      if (e.key === 'Escape') hideOverlay();
+      if (e.key === 'Escape') { hideOverlay(); resetAllModes(); }
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown') navigateOverlay(1);
       if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') navigateOverlay(-1);
       if (e.key === 'f' || e.key === 'F') {
         showFPS = !showFPS;
         document.getElementById('fps-counter').classList.toggle('visible', showFPS);
+      }
+
+      // Konami code
+      if (e.keyCode === konamiSeq[konamiIdx]) {
+        konamiIdx++;
+        if (konamiIdx === konamiSeq.length) {
+          triggerGoldMode();
+          konamiIdx = 0;
+        }
+      } else {
+        konamiIdx = 0;
+      }
+
+      // Typed word detection
+      if (e.key.length === 1) {
+        typedBuffer += e.key.toUpperCase();
+        if (typedBuffer.length > 20) typedBuffer = typedBuffer.slice(-20);
+        if (typedBuffer.endsWith('LATENT')) triggerInvertMode();
       }
     }
 
