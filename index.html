@@ -51,6 +51,15 @@
     /* ========================================
        CUSTOM CURSOR
     ======================================== */
+    #cursor-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 9997;
+      pointer-events: none;
+      width: 100%;
+      height: 100%;
+    }
+
     .cursor-dot {
       position: fixed;
       top: -20px;
@@ -487,6 +496,7 @@
 <body>
 
   <!-- CUSTOM CURSOR -->
+  <canvas id="cursor-canvas"></canvas>
   <div class="cursor-dot" id="cursor-dot"></div>
   <div class="cursor-ring" id="cursor-ring"></div>
 
@@ -793,25 +803,108 @@
     var bgX = 0, bgY = 0;
     var bgTargetX = 0, bgTargetY = 0;
 
+    // Smoke trail particles
+    var smokeCanvas = document.getElementById('cursor-canvas');
+    var smokeCtx = null;
+    var smokeParticles = [];
+    var MAX_SMOKE = 60;
+    var prevCursorX = 0, prevCursorY = 0;
+
     if (!isMobile) {
+      smokeCanvas.width = window.innerWidth;
+      smokeCanvas.height = window.innerHeight;
+      smokeCtx = smokeCanvas.getContext('2d');
+
+      window.addEventListener('resize', function() {
+        smokeCanvas.width = window.innerWidth;
+        smokeCanvas.height = window.innerHeight;
+      });
+
       document.body.classList.add('cursor-ready');
       window.addEventListener('pointermove', function(e) {
         cursorX = e.clientX;
         cursorY = e.clientY;
         cursorDot.style.transform = 'translate(' + cursorX + 'px,' + cursorY + 'px) translate(-50%,-50%)';
-        // Background parallax — moves opposite to cursor for depth
+
+        // Spawn smoke based on movement speed
+        var dx = cursorX - prevCursorX;
+        var dy = cursorY - prevCursorY;
+        var speed = Math.sqrt(dx * dx + dy * dy);
+
+        if (speed > 2) {
+          var count = Math.min(Math.floor(speed / 8), 3);
+          for (var s = 0; s < count; s++) {
+            smokeParticles.push({
+              x: cursorX + (Math.random() - 0.5) * 8,
+              y: cursorY + (Math.random() - 0.5) * 8,
+              vx: -dx * 0.02 + (Math.random() - 0.5) * 0.5,
+              vy: -dy * 0.02 + (Math.random() - 0.5) * 0.5 - 0.3,
+              size: 3 + Math.random() * 12,
+              alpha: 0.15 + Math.random() * 0.15,
+              life: 1.0,
+              decay: 0.01 + Math.random() * 0.015,
+              gold: Math.random() > 0.6
+            });
+          }
+          if (smokeParticles.length > MAX_SMOKE) {
+            smokeParticles.splice(0, smokeParticles.length - MAX_SMOKE);
+          }
+        }
+
+        prevCursorX = cursorX;
+        prevCursorY = cursorY;
+
+        // Background parallax
         bgTargetX = -((e.clientX / window.innerWidth) - 0.5) * 30;
         bgTargetY = -((e.clientY / window.innerHeight) - 0.5) * 20;
       });
-      (function ringLoop() {
-        requestAnimationFrame(ringLoop);
+
+      (function cursorLoop() {
+        requestAnimationFrame(cursorLoop);
+
+        // Ring follow
         ringX += (cursorX - ringX) * 0.12;
         ringY += (cursorY - ringY) * 0.12;
         cursorRing.style.transform = 'translate(' + ringX + 'px,' + ringY + 'px) translate(-50%,-50%)';
-        // Smooth background drift
+
+        // Background drift
         bgX += (bgTargetX - bgX) * 0.02;
         bgY += (bgTargetY - bgY) * 0.02;
         if (bgAtmo) bgAtmo.style.transform = 'translate(' + bgX + 'px,' + bgY + 'px)';
+
+        // Draw smoke
+        if (smokeCtx) {
+          smokeCtx.clearRect(0, 0, smokeCanvas.width, smokeCanvas.height);
+
+          for (var i = smokeParticles.length - 1; i >= 0; i--) {
+            var p = smokeParticles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy -= 0.01; // drift upward
+            p.size += 0.3; // expand
+            p.life -= p.decay;
+
+            if (p.life <= 0) {
+              smokeParticles.splice(i, 1);
+              continue;
+            }
+
+            var alpha = p.alpha * p.life * p.life; // quadratic fade
+            smokeCtx.beginPath();
+            var gradient = smokeCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+            if (p.gold) {
+              gradient.addColorStop(0, 'rgba(184,150,78,' + alpha + ')');
+              gradient.addColorStop(0.5, 'rgba(184,150,78,' + (alpha * 0.3) + ')');
+            } else {
+              gradient.addColorStop(0, 'rgba(250,250,249,' + alpha + ')');
+              gradient.addColorStop(0.5, 'rgba(200,200,200,' + (alpha * 0.2) + ')');
+            }
+            gradient.addColorStop(1, 'rgba(0,0,0,0)');
+            smokeCtx.fillStyle = gradient;
+            smokeCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            smokeCtx.fill();
+          }
+        }
       })();
     }
 
