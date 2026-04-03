@@ -406,7 +406,7 @@
       z-index: 0;
       pointer-events: none;
       background: url('images/bg-atmosphere.webp') center center / cover no-repeat;
-      opacity: 0.3;
+      opacity: 0.18;
     }
 
     /* ========================================
@@ -736,9 +736,9 @@
       'images/u7768149725_two_intertwined_double_helix_structures_spiraling_b98931e1-ec6d-4c04-9f96-de48371271d4_0.webp'
     ];
 
-    var GLOBE_RADIUS = 9;
-    var CARD_W = 1.2;
-    var CARD_H = 1.2;
+    var GLOBE_RADIUS = 10;
+    var CARD_W = 1.4;
+    var CARD_H = 1.4;
     var DAMPING = 0.95;
     var AUTO_ROTATE = 0.002;
     var PARTICLE_COUNT = 350;
@@ -983,7 +983,7 @@
         vertexColors: true,
         wireframe: true,
         transparent: true,
-        opacity: 0.06,
+        opacity: 0.03,
         depthWrite: false
       });
       wireframeGlobe = new THREE.Mesh(wireGeo, wireMat);
