@@ -809,16 +809,17 @@
     // 4. GRID POSITIONS
     // ========================================
     function gridPos(i, total) {
-      var cols = Math.ceil(Math.sqrt(total * 1.6));
-      var spacingX = CARD_W * 1.2;
-      var spacingY = CARD_H * 1.25;
+      // Wider grid with more breathing room — 10 columns
+      var cols = 10;
+      var spacingX = CARD_W * 1.5;
+      var spacingY = CARD_H * 1.5;
       var col = i % cols;
       var row = Math.floor(i / cols);
       var rows = Math.ceil(total / cols);
       var ox = -(cols - 1) * spacingX * 0.5;
       var oy = (rows - 1) * spacingY * 0.5;
       // Stagger odd rows for masonry feel
-      var stagger = (row % 2 === 1) ? spacingX * 0.4 : 0;
+      var stagger = (row % 2 === 1) ? spacingX * 0.35 : 0;
       return new THREE.Vector3(
         ox + col * spacingX + stagger,
         oy - row * spacingY,
@@ -854,6 +855,7 @@
       'uniform float uDistortion;',
       'uniform vec3 fogColor;',
       'uniform float fogDensity;',
+      'uniform vec3 uCameraPos;',
       'varying vec2 vUv;',
       'varying vec3 vWorldPos;',
       '',
@@ -902,6 +904,13 @@
       '  // Vignette per card',
       '  float vig = 1.0 - dot((uv - 0.5) * 1.2, (uv - 0.5) * 1.2);',
       '  col *= smoothstep(0.0, 0.6, vig);',
+      '',
+      '  // Facing-camera brightness — front bright, back dim',
+      '  vec3 toCamera = normalize(uCameraPos - vWorldPos);',
+      '  vec3 cardNormal = normalize(vWorldPos);',
+      '  float facing = dot(toCamera, cardNormal);',
+      '  float brightness = smoothstep(-0.3, 0.6, facing);',
+      '  col *= 0.4 + brightness * 0.6;',
       '',
       '  // Fog',
       '  float depth = gl_FragCoord.z / gl_FragCoord.w;',
@@ -1149,6 +1158,8 @@
       var pct = Math.round((loadedCount / total) * 100);
       document.getElementById('loader-fill').style.width = pct + '%';
       document.getElementById('loader-pct').textContent = pct + '%';
+      // Live count updates as images arrive
+      document.getElementById('count-number').textContent = loadedCount + ' / ' + total;
 
       // Show globe after just 5 images — don't wait for all 137
       if (!introTriggered && loadedCount >= 5) {
@@ -1170,7 +1181,7 @@
       var textureLoader = new THREE.TextureLoader();
       var total = IMAGES.length;
 
-      document.getElementById('count-number').textContent = total;
+      document.getElementById('count-number').textContent = '0 / ' + total;
 
       // Queue all, load in batches
       for (var qi = 0; qi < total; qi++) {
@@ -1201,7 +1212,8 @@
               uHover: { value: 0 },
               uDistortion: { value: 0 },
               fogColor: { value: new THREE.Color(0x09090B) },
-              fogDensity: { value: 0.018 }
+              fogDensity: { value: 0.018 },
+              uCameraPos: { value: new THREE.Vector3(0, 0, 20) }
             },
             vertexShader: liquidVertexShader,
             fragmentShader: liquidFragmentShader,
@@ -1387,12 +1399,35 @@
       targetZoom = Math.max(8, Math.min(30, targetZoom));
     }
 
+    var focusZoomActive = false;
+    var focusZoomTarget = null;
+    var focusZoomOrigZ = 0;
+
     function onClick(e) {
-      if (!introPlayed || isTransitioning) return;
+      if (!introPlayed || isTransitioning || focusZoomActive) return;
       _raycaster.setFromCamera(_mouse, camera);
       var hits = _raycaster.intersectObjects(cards);
       if (hits.length > 0) {
-        showOverlay(hits[0].object.userData);
+        var card = hits[0].object;
+        // Focus-zoom: dolly camera toward the card, then show overlay
+        focusZoomActive = true;
+        focusZoomTarget = card;
+        focusZoomOrigZ = targetZoom;
+        // Zoom in closer
+        targetZoom = Math.max(6, targetZoom - 4);
+        // Scale up the clicked card
+        card.userData.targetScale = 1.5;
+        // Show overlay after the zoom
+        setTimeout(function() {
+          showOverlay(card.userData);
+          // Reset after overlay shows
+          setTimeout(function() {
+            targetZoom = focusZoomOrigZ;
+            card.userData.targetScale = 1;
+            focusZoomActive = false;
+            focusZoomTarget = null;
+          }, 200);
+        }, 500);
       }
     }
 
@@ -1534,6 +1569,7 @@
         c.scale.set(d.currentScale, d.currentScale, d.currentScale);
         c.material.uniforms.uHover.value = d.currentHover;
         c.material.uniforms.uTime.value = time;
+        c.material.uniforms.uCameraPos.value.copy(camera.position);
         // Brighten gold border on hover
         if (c.children[0]) {
           c.children[0].material.opacity = 0.1 + d.currentHover * 0.4;
