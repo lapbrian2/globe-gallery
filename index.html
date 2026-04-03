@@ -940,7 +940,7 @@
     // 6B. GAUSSIAN SPLAT NEBULA
     // ========================================
     var splatSystem = null;
-    var SPLAT_COUNT = 400;
+    var SPLAT_COUNT = 800;
 
     function initGaussianSplats() {
       var geo = new THREE.BufferGeometry();
@@ -981,8 +981,8 @@
         colors[i * 3 + 2] = c[2];
 
         // Variable sizes — most small, some large
-        sizes[i] = 0.8 + Math.random() * Math.random() * 3.0;
-        alphas[i] = 0.08 + Math.random() * 0.15;
+        sizes[i] = 1.2 + Math.random() * Math.random() * 5.0;
+        alphas[i] = 0.12 + Math.random() * 0.2;
         phases[i] = Math.random() * Math.PI * 2;
       }
 
@@ -1028,7 +1028,7 @@
           '  vec2 center = gl_PointCoord - 0.5;',
           '  float dist = dot(center, center);',
           '  // True Gaussian: exp(-dist * sharpness)',
-          '  float gaussian = exp(-dist * 3.5);',
+          '  float gaussian = exp(-dist * 2.0);',
           '  // Fade edges completely',
           '  float alpha = gaussian * vAlpha;',
           '  if (alpha < 0.001) discard;',
