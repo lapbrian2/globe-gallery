@@ -1979,7 +1979,21 @@
       return {r:r,g:g,b:b};
     }
 
-    function generateColor() { var c = HSVtoRGB(Math.random(), 1.0, 1.0); c.r*=0.15; c.g*=0.15; c.b*=0.15; return c; }
+    function generateColor() {
+      // Project DNA palette: gold, warm amber, deep blue-grey, muted cream
+      var palette = [
+        { r: 0.722, g: 0.588, b: 0.306 },  // gold #B8964E
+        { r: 0.55, g: 0.42, b: 0.22 },      // dark gold
+        { r: 0.85, g: 0.72, b: 0.45 },      // bright amber
+        { r: 0.15, g: 0.18, b: 0.25 },      // deep blue-grey
+        { r: 0.25, g: 0.22, b: 0.18 },      // warm carbon
+        { r: 0.44, g: 0.44, b: 0.48 },      // pewter
+        { r: 0.35, g: 0.28, b: 0.20 },      // burnt umber
+        { r: 0.6, g: 0.55, b: 0.42 },       // linen warm
+      ];
+      var c = palette[Math.floor(Math.random() * palette.length)];
+      return { r: c.r * 0.15, g: c.g * 0.15, b: c.b * 0.15 };
+    }
 
     function correctRadius(radius) { var ar = canvas.width/canvas.height; if (ar>1) radius*=ar; return radius; }
 
