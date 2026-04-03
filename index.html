@@ -674,11 +674,10 @@
     // ========================================
     function updateCursor() {
       if (isMobile) return;
-      gsap.set(cursorDot, { x: cursorX, y: cursorY });
-      // Ring follows with lerp
+      cursorDot.style.transform = 'translate(' + cursorX + 'px,' + cursorY + 'px) translate(-50%,-50%)';
       ringX += (cursorX - ringX) * 0.15;
       ringY += (cursorY - ringY) * 0.15;
-      gsap.set(cursorRing, { x: ringX, y: ringY });
+      cursorRing.style.transform = 'translate(' + ringX + 'px,' + ringY + 'px) translate(-50%,-50%)';
     }
 
     // ========================================
@@ -1109,24 +1108,40 @@
           globeGroup.add(mesh);
 
           loadedCount++;
-          var pct = Math.round((loadedCount / total) * 100);
-          document.getElementById('loader-fill').style.width = pct + '%';
-          document.getElementById('loader-pct').textContent = pct + '%';
-
-          if (loadedCount === total) {
-            onAllLoaded();
-          }
+          onImageProgress();
         }, undefined, function() {
-          // Error handler — still count so we don't block onAllLoaded
           loadedCount++;
-          var pct = Math.round((loadedCount / total) * 100);
-          document.getElementById('loader-fill').style.width = pct + '%';
-          document.getElementById('loader-pct').textContent = pct + '%';
-          if (loadedCount === total) {
-            onAllLoaded();
-          }
+          onImageProgress();
         });
       });
+    }
+
+    // ========================================
+    // 8B. PROGRESSIVE LOADING
+    // ========================================
+    var introTriggered = false;
+    var EARLY_THRESHOLD = Math.ceil(IMAGES.length * 0.15); // show after 15% loaded
+
+    function onImageProgress() {
+      var total = IMAGES.length;
+      var pct = Math.round((loadedCount / total) * 100);
+      document.getElementById('loader-fill').style.width = pct + '%';
+      document.getElementById('loader-pct').textContent = pct + '%';
+
+      // Reveal cards as they load (don't wait for all)
+      if (!introTriggered && loadedCount >= EARLY_THRESHOLD) {
+        introTriggered = true;
+        onAllLoaded();
+      }
+
+      // Each card reveals itself as it loads (after intro triggered)
+      if (introTriggered && loadedCount > EARLY_THRESHOLD) {
+        var card = cards[cards.length - 1];
+        if (card && card.userData.targetScale < 1) {
+          card.userData.targetScale = 1;
+          card.userData.revealDelay = performance.now();
+        }
+      }
     }
 
     // ========================================
