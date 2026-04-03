@@ -398,6 +398,18 @@
     }
 
     /* ========================================
+       BACKGROUND ATMOSPHERE
+    ======================================== */
+    .bg-atmosphere {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background: url('images/bg-atmosphere.webp') center center / cover no-repeat;
+      opacity: 0.3;
+    }
+
+    /* ========================================
        SCREEN VIGNETTE
     ======================================== */
     .screen-vignette {
@@ -485,6 +497,9 @@
 
   <!-- THREE.JS CANVAS -->
   <div id="canvas-wrap"></div>
+
+  <!-- BACKGROUND ATMOSPHERE -->
+  <div class="bg-atmosphere"></div>
 
   <!-- BACKGROUND NOISE -->
   <div class="bg-noise"></div>
@@ -651,26 +666,70 @@
       'images/sl-7.webp',
       'images/sl-8.webp',
       'images/sl-9.webp',
+      'images/sl-u7768149725_AI-generated_digital_matte_painting_massive_lumin_06270cb9-12c3-498b-bd5b-424fd5d10264_0.webp',
       'images/sl-u7768149725_AI-generated_editorial_portrait_hyperrealistic_re_d5a62b73-736b-44d4-bca5-5bef14558f23_0.webp',
       'images/sl-u7768149725_AI-generated_surreal_landscape_photography_select_25572075-47e4-4610-84d0-fb252e21bb71_0.webp',
       'images/sl-u7768149725_AI-generated_surreal_landscape_photography_select_25572075-47e4-4610-84d0-fb252e21bb71_3.webp',
       'images/sl-u7768149725_AI-generated_surreal_landscape_photography_select_87932a2d-44ed-44b8-9b33-7abc450e0fcf_0.webp',
       'images/sl-u7768149725_AI-generated_surreal_portait_photography_selectiv_de6b3067-4dce-4720-be6d-f57f29bd2fcc_1.webp',
+      'images/sl-u7768149725_CGI_3D_animated_render_hyper-detailed_ABS_plastic_72f20505-ff7f-4b00-9a3a-bc6a366e18eb_2-1.webp',
+      'images/sl-u7768149725_Faceless_glitched_figure_in_dark_suit_pixel-sorte_979c9761-98ae-49ce-8f30-1740df9ae577_0.webp',
+      'images/sl-u7768149725_Faceless_glitched_figure_in_dark_suit_pixel-sorte_979c9761-98ae-49ce-8f30-1740df9ae577_1.webp',
+      'images/sl-u7768149725_Flat_unlit_pop-art_illumination_with_no_direction_d3f00706-682e-417d-9b81-854e53910a5b_2.webp',
+      'images/sl-u7768149725_Flat_unlit_pop-art_illumination_with_no_direction_d3f00706-682e-417d-9b81-854e53910a5b_3.webp',
+      'images/sl-u7768149725_Francisco_Goya_Art_Goya_Disparate_Cruel_Goya_Los__6057c986-d6d9-4df6-b974-53a8d6e3b71f_1.webp',
+      'images/sl-u7768149725_Francisco_Goya_Art_Goya_Disparate_Cruel_Goya_Los__6e873326-d5c6-45b9-9aa1-3268e76b8c34_3.webp',
+      'images/sl-u7768149725_Francisco_Goya_Art_Goya_Pinturas_Negras_Goya_Ever_9cf95997-e700-45af-9fb8-c86d0c84cc1b_2.webp',
+      'images/sl-u7768149725_Francisco_Goya_Art_Goya_Self_Portrait_with_Doctor_ab5178cc-e0ed-45c5-a53a-ba3af83e75fc_2.webp',
+      'images/sl-u7768149725_Ultra-minimalist_athletic_brand_web_design_system_d684046e-81ab-445c-b731-e3de598304d5_3.webp',
+      'images/sl-u7768149725_a_pixelated_stair-stepped_figure_of_a_musician_pl_cd22810e-224e-4ad9-b1b5-4f70b336e204_0.webp',
+      'images/sl-u7768149725_close-up_cinematic_portrait_of_a_woman_single_hor_80f59124-53d7-4419-8d2e-7cceef53efaa_2.webp',
+      'images/sl-u7768149725_commercial_food_photography_single_key_light_from_0a18cff0-08aa-4041-80e9-c8fe1be70b3d_1.webp',
+      'images/sl-u7768149725_commercial_food_photography_single_key_light_from_133da51c-e293-4cda-ad17-b54468b892b2_1.webp',
+      'images/sl-u7768149725_commercial_food_photography_single_key_light_from_bc8818b9-9ad4-4591-92e9-98fda47c760a_2.webp',
       'images/sl-u7768149725_deep_blue_botanical_luxury_soft_theatrical_light1_33fa3625-fb7d-4943-bbe4-5f9fffc1b429_0.webp',
       'images/sl-u7768149725_deep_blue_botanical_luxury_soft_theatrical_light1_33fa3625-fb7d-4943-bbe4-5f9fffc1b429_3.webp',
       'images/sl-u7768149725_digital_painting_neo-expressionist_grotesque_carn_c4b3ed26-084c-4d3e-802a-02e886a0ffed_0.webp',
       'images/sl-u7768149725_digital_painting_neo-expressionist_grotesque_carn_c4b3ed26-084c-4d3e-802a-02e886a0ffed_1.webp',
       'images/sl-u7768149725_editorial_fashion_photograph_AI-generated_hyperre_faed0e5d-0c89-474e-908c-4cc487fa02e4_1.webp',
+      'images/sl-u7768149725_editorial_fashion_photography_analog_film_grain_a_274ce49c-88f5-48dd-867c-bd0491529c9e_0.webp',
+      'images/sl-u7768149725_editorial_fashion_photography_analog_film_grain_a_274ce49c-88f5-48dd-867c-bd0491529c9e_1.webp',
+      'images/sl-u7768149725_editorial_fashion_photography_analog_film_grain_a_274ce49c-88f5-48dd-867c-bd0491529c9e_3.webp',
+      'images/sl-u7768149725_editorial_fashion_photography_high-contrast_silho_c3dd1efa-8a52-4555-8553-667124110359_2.webp',
+      'images/sl-u7768149725_editorial_fashion_photography_high-contrast_silho_c3dd1efa-8a52-4555-8553-667124110359_3.webp',
+      'images/sl-u7768149725_editorial_fashion_photography_medium-format_film__bca5ab6e-dee9-4e69-9ba5-2bf79e373cb9_1.webp',
+      'images/sl-u7768149725_editorial_fashion_photography_medium-format_film__c49ab242-a608-4159-ad82-fbc0b3b9d151_3.webp',
+      'images/sl-u7768149725_editorial_fashion_photography_on_classic_wooden_s_1ccc44d5-9766-45b4-8b8c-0b28b3f52d92_3.webp',
+      'images/sl-u7768149725_ethereal_warm_nebula_deep_space_palette_with_lave_5ecfc30d-b5cb-4227-9e52-d08a66430496_3.webp',
+      'images/sl-u7768149725_graphic_design_website_screenshot_luminous_minima_1d2c3bd2-4d99-496b-b44e-dc6f344eddf5_1.webp',
       'images/sl-u7768149725_high-end_sportswear_product_photography_glossy_sy_3e965b8a-c7fc-4dd5-a5c8-8b2fa703133e_1.webp',
+      'images/sl-u7768149725_luminous_monolith_in_dark_landscape_cosmic_sublim_20b415ac-9220-4258-a72e-48b80fd2b4d9_0.webp',
+      'images/sl-u7768149725_luxury_automotive_CGI_warm_metallic_champagne1.3__6195062c-e1de-44c3-9b8a-da6a247e20bb_2.webp',
+      'images/sl-u7768149725_multi-algorithm_dither_portrait_different_ditheri_f3bf6f52-31b8-4518-9d96-6d677d6dab26_2.webp',
+      'images/sl-u7768149725_multi-algorithm_dither_portrait_different_ditheri_f4593630-a4c6-4c95-b6ce-bb40b4ddf941_3.webp',
+      'images/sl-u7768149725_multi-algorithm_dither_processing_different_dithe_1e4ab3ba-0291-44fb-aaa0-0bb79997efbb_1.webp',
+      'images/sl-u7768149725_multi-algorithm_dither_processing_different_dithe_6f0eaa88-ac4b-4c0a-8f01-0e26b69487bc_0.webp',
+      'images/sl-u7768149725_multi-algorithm_dither_processing_different_dithe_f288cae3-4854-4282-a4e6-f1f97af06d55_3.webp',
       'images/sl-u7768149725_oil_painting_impasto_heavy_palette_knife_brushstr_4642926a-9625-4c4c-8694-50054612dd90_0.webp',
       'images/sl-u7768149725_oil_painting_with_neural_style_transfer_distortio_428fee46-d3cd-4608-a181-0ce9ab1c39e6_3.webp',
       'images/sl-u7768149725_oil_painting_with_neural_style_transfer_distortio_babfea5d-0eb4-4fa2-9bb6-23ead7fcfd4c_3.webp',
       'images/sl-u7768149725_pen_and_ink_isometric_illustration_on_aged_vellum_23662698-46d1-4572-9523-0040707ff15f_2.webp',
+      'images/sl-u7768149725_portrait_of_an_elderly_man_in_profile_view_sfumat_fceb4252-1f96-47dd-b41f-10543f8e9bd2_3.webp',
+      'images/sl-u7768149725_sci-fi_concept_art_colossal_geological_ring_struc_bd624550-22c8-47bb-8913-7194950c5b4d_3.webp',
+      'images/sl-u7768149725_sci-fi_concept_art_colossal_geological_ring_struc_de507e93-d9dc-4c52-8500-b17add5e2f5c_2.webp',
       'images/sl-u7768149725_silver_gelatin_black_and_white_photograph_1930s_H_ee08a7d4-1747-4172-8e98-171a38c32181_2.webp',
+      'images/sl-u7768149725_surrealist_collage_aesthetic_vintage_magazine_cut_528a5dae-37fc-47af-9194-21ecf9f4a482_2.webp',
+      'images/sl-u7768149725_surrealist_collage_aesthetic_vintage_magazine_cut_681bca50-cc7d-4fd6-9fae-272cf431544e_0.webp',
       'images/sl-u7768149725_surrealist_fashion_photograph_baroque_theatrical__45040628-33ca-4b3c-9eec-1d52ce68191a_2-1.webp',
       'images/sl-u7768149725_surrealist_fashion_photograph_baroque_theatrical__45040628-33ca-4b3c-9eec-1d52ce68191a_2.webp',
       'images/sl-u7768149725_surrealist_fashion_photograph_baroque_theatrical__f84ccbf9-7c82-42b3-bbad-e088f5c7790f_1.webp',
+      'images/sl-u7768149725_surrealist_vintage_collage_cut-and-paste_paper_te_27653c25-d6d0-414c-b0fd-372ed491b7ca_0.webp',
+      'images/sl-u7768149725_surrealist_vintage_collage_cut-and-paste_paper_te_27653c25-d6d0-414c-b0fd-372ed491b7ca_1.webp',
+      'images/sl-u7768149725_temporal_frame-blending_corruption_the_same_portr_435b7371-1fb1-4940-9e32-9df1f14844b5_3.webp',
+      'images/sl-u7768149725_temporal_frame-blending_corruption_the_same_portr_8423a053-6810-4148-9fb9-75cb4bfcc745_1.webp',
+      'images/sl-u7768149725_temporal_frame-blending_corruption_the_same_portr_84611375-0f83-4c1b-9c5f-10908bc0a5da_0.webp',
       'images/sl-u7768149725_thick_impasto_oil_painting_palette_knife1.4_glowi_d31fb0ef-776b-4f54-a3e9-17de500ffa8d_0.webp',
+      'images/sl-u7768149725_two_pixelated_stair-stepped_figures_facing_each_o_49c227e8-e068-4213-9044-801ca2b345fc_1.webp',
       'images/sl-u7768149725_warm_amber_golden-hour_cinematography1.3_caramel__abe9f606-c568-4f78-8e20-a656266337d0_1.webp',
       'images/u7768149725_dark_void_electric_violet_radial_gradients_emissi_cccb0fce-822d-47f4-bd2d-6c6da35d2701_1.webp',
       'images/u7768149725_dark_void_electric_violet_radial_gradients_emissi_cccb0fce-822d-47f4-bd2d-6c6da35d2701_3.webp',
@@ -933,7 +992,6 @@
       globeGroup.add(wireframeGlobe);
 
       initParticles();
-      initCoreGlow();
     }
 
     // ========================================
@@ -1542,13 +1600,6 @@
         wireframeGlobe.rotation.x = Math.sin(time * 0.12) * 0.04;
       }
 
-      // Core glow pulse
-      if (coreGlow) {
-        coreGlow.material.uniforms.uTime.value = time;
-      }
-      if (window._coreLight) {
-        window._coreLight.intensity = 0.5 + Math.sin(time * 0.5) * 0.15;
-      }
 
       // Particles
       updateParticles(time);
