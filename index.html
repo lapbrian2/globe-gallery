@@ -432,6 +432,60 @@
     }
 
     /* ========================================
+       HELP OVERLAY
+    ======================================== */
+    #help-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(9,9,11,0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.4s ease, visibility 0.4s ease;
+    }
+    #help-overlay.visible { opacity: 1; visibility: visible; }
+    .help-content { text-align: center; }
+    .help-title {
+      font-family: var(--font-display);
+      font-weight: 300;
+      font-size: 1.4rem;
+      color: var(--gallery-white);
+      margin-bottom: 2rem;
+    }
+    .help-grid {
+      display: grid;
+      grid-template-columns: auto auto;
+      gap: 0.6rem 2rem;
+      text-align: left;
+    }
+    .help-key {
+      font-family: var(--font-body);
+      font-size: 0.65rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+    .help-desc {
+      font-family: var(--font-body);
+      font-size: 0.65rem;
+      color: var(--pewter);
+    }
+    .help-dismiss {
+      font-family: var(--font-body);
+      font-size: 0.55rem;
+      color: rgba(113,113,122,0.5);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-top: 2rem;
+    }
+
+    /* ========================================
        EASTER EGG MODES
     ======================================== */
     body.gold-mode #canvas-wrap {
@@ -515,6 +569,24 @@
     <button class="overlay-nav overlay-next" id="overlay-next" aria-label="Next image">&rarr;</button>
     <div class="overlay-meta">
       <span id="overlay-index"></span>
+    </div>
+  </div>
+
+  <!-- HELP OVERLAY -->
+  <div id="help-overlay">
+    <div class="help-content">
+      <div class="help-title">Controls</div>
+      <div class="help-grid">
+        <span class="help-key">Drag</span><span class="help-desc">Orbit the globe</span>
+        <span class="help-key">Scroll</span><span class="help-desc">Zoom in / out</span>
+        <span class="help-key">Click</span><span class="help-desc">Open image</span>
+        <span class="help-key">Double-click</span><span class="help-desc">Isolate + neighbors</span>
+        <span class="help-key">&larr; &rarr;</span><span class="help-desc">Navigate in overlay</span>
+        <span class="help-key">Esc</span><span class="help-desc">Close / reset</span>
+        <span class="help-key">F</span><span class="help-desc">Toggle FPS</span>
+        <span class="help-key">?</span><span class="help-desc">This panel</span>
+      </div>
+      <div class="help-dismiss">Press any key to close</div>
     </div>
   </div>
 
@@ -1244,7 +1316,9 @@
           mesh.add(border);
 
           // Globe position via Fibonacci
-          var gp = fibSphere(i, total, GLOBE_RADIUS);
+          // Depth variation — each card at slightly different radius
+          var depthOffset = (Math.random() - 0.5) * GLOBE_RADIUS * 0.12;
+          var gp = fibSphere(i, total, GLOBE_RADIUS + depthOffset);
           mesh.position.copy(gp);
           mesh.lookAt(0, 0, 0);
           mesh.rotateY(Math.PI);
@@ -1666,10 +1740,26 @@
       _raycaster.setFromCamera(_mouse, camera);
       var intersects = _raycaster.intersectObjects(cards);
 
+      // Magnetic pull — cards near the mouse lean toward cursor
+      if (introPlayed && !isTransitioning) {
+        var mouseWorldX = _mouse.x * currentZoom * 0.5;
+        var mouseWorldY = _mouse.y * currentZoom * 0.3;
+        for (var mp = 0; mp < cards.length; mp++) {
+          var mc = cards[mp];
+          var screenDx = mc.position.x - mouseWorldX;
+          var screenDy = mc.position.y - mouseWorldY;
+          var screenDist = Math.sqrt(screenDx * screenDx + screenDy * screenDy);
+          if (screenDist < 3.0 && screenDist > 0.1) {
+            var pull = (1.0 - screenDist / 3.0) * 0.15;
+            mc.position.x -= screenDx * pull * 0.02;
+            mc.position.y -= screenDy * pull * 0.02;
+          }
+        }
+      }
+
       if (hoveredCard && (!intersects.length || intersects[0].object !== hoveredCard)) {
         hoveredCard.userData.targetScale = 1;
         hoveredCard.userData.targetHover = 0;
-        // cursor ring removed — fluid cursor handles hover
         hoveredCard = null;
       }
 
@@ -1679,7 +1769,6 @@
           hoveredCard = target;
           hoveredCard.userData.targetScale = 1.25;
           hoveredCard.userData.targetHover = 1;
-          // fluid cursor handles hover visual
         }
       }
 
@@ -1783,6 +1872,17 @@
       if (e.key === 'f' || e.key === 'F') {
         showFPS = !showFPS;
         document.getElementById('fps-counter').classList.toggle('visible', showFPS);
+      }
+
+      // Help overlay
+      var helpEl = document.getElementById('help-overlay');
+      if (e.key === '?') {
+        helpEl.classList.toggle('visible');
+        return;
+      }
+      if (helpEl.classList.contains('visible')) {
+        helpEl.classList.remove('visible');
+        return;
       }
 
       // Konami code
