@@ -51,6 +51,19 @@
     /* ========================================
        CUSTOM CURSOR
     ======================================== */
+    #cursor-dot {
+      position: fixed;
+      top: -10px;
+      left: -10px;
+      width: 6px;
+      height: 6px;
+      background: var(--gold);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      will-change: transform;
+    }
+
     #fluid-canvas {
       position: fixed;
       inset: 0;
@@ -408,7 +421,7 @@
     ======================================== */
     @media (max-width: 768px) {
       html, body { cursor: auto; }
-      #fluid-canvas { display: none; }
+      #fluid-canvas, #cursor-dot { display: none; }
       .title-bar { top: 1rem; left: 1rem; }
       .title-bar h1 { font-size: 1.1rem; }
       .title-bar .overline { font-size: 0.5rem; }
@@ -520,6 +533,7 @@
 
   <!-- FLUID CURSOR -->
   <canvas id="fluid-canvas"></canvas>
+  <div id="cursor-dot"></div>
 
   <!-- LOADER -->
   <div id="loader">
@@ -841,11 +855,13 @@
 
     if (!isMobile) {
       document.body.classList.add('cursor-ready');
+      var dotEl = document.getElementById('cursor-dot');
 
       // Background parallax on pointermove
       window.addEventListener('pointermove', function(e) {
         cursorX = e.clientX;
         cursorY = e.clientY;
+        dotEl.style.transform = 'translate(' + cursorX + 'px,' + cursorY + 'px) translate(-50%,-50%)';
         _mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
         _mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
         targetParallaxX = _mouse.x * 0.3;
