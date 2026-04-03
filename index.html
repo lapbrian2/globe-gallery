@@ -1084,12 +1084,8 @@
           texture.magFilter = THREE.LinearFilter;
 
           var aspect = texture.image.width / texture.image.height;
-          // Size hierarchy — every 5th card is a hero (1.5x), every 13th is feature (2x)
-          var sizeMultiplier = 1.0;
-          if (i % 13 === 0) sizeMultiplier = 1.8;
-          else if (i % 5 === 0) sizeMultiplier = 1.4;
-          var w = CARD_W * sizeMultiplier;
-          var h = CARD_H * sizeMultiplier;
+          var w = CARD_W;
+          var h = CARD_H;
           if (aspect > 1.2) { h = w / aspect; }
           else if (aspect < 0.8) { w = h * aspect; }
 
