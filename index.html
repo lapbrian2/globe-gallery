@@ -677,9 +677,9 @@
       'images/u7768149725_two_intertwined_double_helix_structures_spiraling_b98931e1-ec6d-4c04-9f96-de48371271d4_0.webp'
     ];
 
-    var GLOBE_RADIUS = 5.5;
-    var CARD_W = 1.8;
-    var CARD_H = 1.8;
+    var GLOBE_RADIUS = 9;
+    var CARD_W = 1.2;
+    var CARD_H = 1.2;
     var DAMPING = 0.95;
     var AUTO_ROTATE = 0.002;
     var PARTICLE_COUNT = 350;
@@ -692,8 +692,8 @@
     var autoSpeed = AUTO_ROTATE;
     var hoveredCard = null;
     var loadedCount = 0;
-    var targetZoom = 14;
-    var currentZoom = 14;
+    var targetZoom = 20;
+    var currentZoom = 20;
     var introPlayed = false;
     var showFPS = false;
     var morphingGlobeRotation = false;
@@ -1179,13 +1179,13 @@
       // PHASE 1 — Grid flickers in darkness (1s)
       setTimeout(function() {
         document.getElementById('loader').classList.add('hidden');
-        targetZoom = 11;
+        targetZoom = 18;
         document.getElementById('title-bar').style.opacity = '1';
       }, 200);
 
       // PHASE 2 — Cards materialize fast (1.2s after loader)
       setTimeout(function() {
-        targetZoom = 10;
+        targetZoom = 16;
 
         var sorted = cards.slice().sort(function(a, b) {
           return Math.abs(b.userData.globePos.y) - Math.abs(a.userData.globePos.y);
@@ -1223,7 +1223,7 @@
 
       var isGlobe = view === 'globe';
       autoSpeed = isGlobe ? AUTO_ROTATE : 0;
-      targetZoom = isGlobe ? 10 : 8;
+      targetZoom = isGlobe ? 16 : 12;
 
       // Set morph targets on each card
       cards.forEach(function(card, i) {
