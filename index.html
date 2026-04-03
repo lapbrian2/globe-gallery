@@ -45,8 +45,8 @@
       color: var(--gallery-white);
       font-family: var(--font-body);
       -webkit-font-smoothing: antialiased;
-      cursor: none;
     }
+    body.cursor-ready { cursor: none; }
 
     /* ========================================
        CUSTOM CURSOR
@@ -672,12 +672,25 @@
     // ========================================
     // 2. CUSTOM CURSOR
     // ========================================
-    function updateCursor() {
-      if (isMobile) return;
-      cursorDot.style.transform = 'translate(' + cursorX + 'px,' + cursorY + 'px) translate(-50%,-50%)';
-      ringX += (cursorX - ringX) * 0.15;
-      ringY += (cursorY - ringY) * 0.15;
-      cursorRing.style.transform = 'translate(' + ringX + 'px,' + ringY + 'px) translate(-50%,-50%)';
+    // Cursor updates via pointermove event, NOT render loop
+    // This ensures cursor works even before Three.js loads
+    if (!isMobile) {
+      document.body.classList.add('cursor-ready');
+      window.addEventListener('pointermove', function(e) {
+        cursorX = e.clientX;
+        cursorY = e.clientY;
+        cursorDot.style.transform = 'translate(' + cursorX + 'px,' + cursorY + 'px) translate(-50%,-50%)';
+        ringX += (cursorX - ringX) * 0.15;
+        ringY += (cursorY - ringY) * 0.15;
+        cursorRing.style.transform = 'translate(' + ringX + 'px,' + ringY + 'px) translate(-50%,-50%)';
+      });
+      // Smooth ring follow via rAF independent of Three.js
+      (function ringLoop() {
+        requestAnimationFrame(ringLoop);
+        ringX += (cursorX - ringX) * 0.12;
+        ringY += (cursorY - ringY) * 0.12;
+        cursorRing.style.transform = 'translate(' + ringX + 'px,' + ringY + 'px) translate(-50%,-50%)';
+      })();
     }
 
     // ========================================
@@ -1020,14 +1033,10 @@
     // ========================================
     // 8. LOAD IMAGES AS SHADER CARDS
     // ========================================
-    function loadCards() {
-      var textureLoader = new THREE.TextureLoader();
-      var total = IMAGES.length;
+    var BATCH_SIZE = 8; // load 8 images at a time
 
-      document.getElementById('count-number').textContent = total;
-
-      IMAGES.forEach(function(src, i) {
-        textureLoader.load(src, function(texture) {
+    function loadSingleCard(src, i, total, textureLoader) {
+      textureLoader.load(src, function(texture) {
           texture.encoding = THREE.sRGBEncoding;
           texture.minFilter = THREE.LinearFilter;
           texture.magFilter = THREE.LinearFilter;
@@ -1109,18 +1118,51 @@
 
           loadedCount++;
           onImageProgress();
+          loadNextBatch();
         }, undefined, function() {
           loadedCount++;
           onImageProgress();
+          loadNextBatch();
         });
-      });
+    }
+
+    var loadQueue = [];
+    var activeLoads = 0;
+
+    function loadNextBatch() {
+      activeLoads--;
+      while (activeLoads < BATCH_SIZE && loadQueue.length > 0) {
+        var item = loadQueue.shift();
+        activeLoads++;
+        loadSingleCard(item.src, item.i, item.total, item.loader);
+      }
+    }
+
+    function loadCards() {
+      var textureLoader = new THREE.TextureLoader();
+      var total = IMAGES.length;
+      document.getElementById('count-number').textContent = total;
+
+      // Queue all images
+      for (var i = 0; i < total; i++) {
+        loadQueue.push({ src: IMAGES[i], i: i, total: total, loader: textureLoader });
+      }
+
+      // Kick off first batch
+      activeLoads = 0;
+      var initialBatch = Math.min(BATCH_SIZE, loadQueue.length);
+      for (var b = 0; b < initialBatch; b++) {
+        var item = loadQueue.shift();
+        activeLoads++;
+        loadSingleCard(item.src, item.i, item.total, item.loader);
+      }
     }
 
     // ========================================
     // 8B. PROGRESSIVE LOADING
     // ========================================
     var introTriggered = false;
-    var EARLY_THRESHOLD = Math.ceil(IMAGES.length * 0.15); // show after 15% loaded
+    var EARLY_THRESHOLD = 5; // show globe after just 5 images — get on screen fast
 
     function onImageProgress() {
       var total = IMAGES.length;
@@ -1480,9 +1522,6 @@
 
       // Particles
       updateParticles(time);
-
-      // Cursor
-      updateCursor();
 
       renderer.render(scene, camera);
     }
